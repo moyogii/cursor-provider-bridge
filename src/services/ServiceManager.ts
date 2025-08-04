@@ -8,7 +8,7 @@ import {
 import { ConfigurationManager } from './ConfigurationManager';
 import { LLMModelProvider } from './ModelProvider';
 import { createTunnelManager } from './TunnelManager';
-import { ModernStatusBarManager } from './StatusBarManager';
+import { StatusBarManager } from './StatusBarManager';
 import { getLogger, disposeLogger } from '../utils/logger';
 
 export class ServiceManager implements vscode.Disposable {
@@ -18,14 +18,14 @@ export class ServiceManager implements vscode.Disposable {
     public readonly configManager: IConfigurationManager;
     public readonly modelProvider: IModelProvider;
     public readonly tunnelManager: ITunnelManager;
-    public readonly statusBarManager: ModernStatusBarManager;
+    public readonly statusBarManager: StatusBarManager;
 
     constructor(context: vscode.ExtensionContext) {
         try {
             this.configManager = new ConfigurationManager();
             this.modelProvider = new LLMModelProvider(this.configManager);
             this.tunnelManager = createTunnelManager(this.configManager, this.modelProvider);
-            this.statusBarManager = new ModernStatusBarManager(
+            this.statusBarManager = new StatusBarManager(
                 this.configManager,
                 this.modelProvider,
                 this.tunnelManager

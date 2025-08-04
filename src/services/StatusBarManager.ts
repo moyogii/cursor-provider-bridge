@@ -9,10 +9,7 @@ import {
 } from '../types';
 import { getLogger } from '../utils/logger';
 
-/**
- * Modern status bar manager with improved architecture and error handling
- */
-export class ModernStatusBarManager implements vscode.Disposable {
+export class StatusBarManager implements vscode.Disposable {
     private readonly statusBarItem: vscode.StatusBarItem;
     private readonly logger = getLogger();
     private updateInterval: NodeJS.Timeout | null = null;

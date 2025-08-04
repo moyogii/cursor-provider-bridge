@@ -9,9 +9,6 @@ import {
 } from '../types';
 import { getLogger } from '../utils/logger';
 
-/**
- * Modern configuration manager with proper encapsulation and type safety
- */
 export class ConfigurationManager implements IConfigurationManager {
     private static readonly EXTENSION_ID = 'cursor-model-bridge';
     private readonly logger = getLogger();
