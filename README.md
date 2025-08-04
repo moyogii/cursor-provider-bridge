@@ -1,4 +1,4 @@
-# Cursor Model Bridge Extension
+# Cursor Provider Bridge Extension
 
 A Cursor extension that integrates local language models with the Cursor IDE Chat through secure ngrok tunneling.
 
@@ -21,7 +21,7 @@ A Cursor extension that integrates local language models with the Cursor IDE Cha
 
 ### From VSIX Package
 1. Download the latest `.vsix` file from releases
-2. Install in Cursor: `cursor --install-extension cursor-model-bridge-1.0.0.vsix`
+2. Install in Cursor: `cursor --install-extension cursor-provider-bridge-1.0.0.vsix`
 3. Or use Cursor UI: Extensions → "..." → Install from VSIX
 
 ### From Source
@@ -36,8 +36,8 @@ A Cursor extension that integrates local language models with the Cursor IDE Cha
 
 ```bash
 # Clone repository
-git clone https://github.com/moyogii/cursor-model-bridge
-cd cursor-model-bridge
+git clone https://github.com/moyogii/cursor-provider-bridge
+cd cursor-provider-bridge
 
 # Install dependencies
 npm install
@@ -64,7 +64,7 @@ npm run package
 ## Support
 
 ### Issue Reporting
-- **GitHub Issues**: Report bugs or request features through our [GitHub issue tracker](https://github.com/moyogii/cursor-model-bridge/issues).
+- **GitHub Issues**: Report bugs or request features through our [GitHub issue tracker](https://github.com/moyogii/cursor-provider-bridge/issues).
   - Please include detailed information about your environment (OS, VSCode version, Node.js version) when reporting issues.
   - For feature requests, describe the functionality you'd like to see and why it would be valuable.
 ---

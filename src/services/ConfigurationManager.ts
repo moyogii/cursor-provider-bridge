@@ -10,7 +10,7 @@ import {
 import { getLogger } from '../utils/logger';
 
 export class ConfigurationManager implements IConfigurationManager {
-    private static readonly EXTENSION_ID = 'cursor-model-bridge';
+    private static readonly EXTENSION_ID = 'cursor-provider-bridge';
     private readonly logger = getLogger();
     private configuration: BridgeConfiguration;
     private readonly changeListeners = new Set<(config: BridgeConfiguration) => void>();
@@ -61,7 +61,7 @@ export class ConfigurationManager implements IConfigurationManager {
 
         const selectedItem = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select configuration to modify',
-            title: 'Cursor Model Bridge Configuration'
+            title: 'Cursor Provider Bridge Configuration'
         });
 
         if (selectedItem) {

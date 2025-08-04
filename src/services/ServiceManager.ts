@@ -111,7 +111,7 @@ export class ServiceManager implements vscode.Disposable {
         if (config.autoStart) {
             try {
                 await this.startBridge();
-                vscode.window.showInformationMessage('Cursor Model Bridge started automatically');
+                vscode.window.showInformationMessage('Cursor Provider Bridge started automatically');
             } catch (error) {
                 this.logger.error('Auto-start failed', error);
                 
@@ -124,7 +124,7 @@ export class ServiceManager implements vscode.Disposable {
                         'Try Again'
                     ).then(selection => {
                         if (selection === 'Disable Auto-start') {
-                            vscode.workspace.getConfiguration().update('cursor-model-bridge.autoStart', false, true);
+                            vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
                         } else if (selection === 'Try Again') {
                             this.startBridge().catch(retryError => {
                                 this.logger.error('Retry failed', retryError);

@@ -6,7 +6,7 @@ let serviceManager: ServiceManager;
 
 export function activate(context: vscode.ExtensionContext): void {
     const logger = getLogger();
-    logger.info('Activating Cursor Model Bridge extension');
+    logger.info('Activating Cursor Provider Bridge extension');
 
     try {
         // Initialize the service manager
@@ -16,11 +16,11 @@ export function activate(context: vscode.ExtensionContext): void {
         // Register extension commands
         registerCommands(context, serviceManager);
 
-        logger.info('Cursor Model Bridge extension activated successfully');
+        logger.info('Cursor Provider Bridge extension activated successfully');
     } catch (error) {
         logger.error('Failed to activate extension', error);
         vscode.window.showErrorMessage(
-            `Failed to activate Cursor Model Bridge: ${error instanceof Error ? error.message : String(error)}`
+            `Failed to activate Cursor Provider Bridge: ${error instanceof Error ? error.message : String(error)}`
         );
         throw error;
     }
@@ -28,51 +28,51 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
     const logger = getLogger();
-    logger.info('Deactivating Cursor Model Bridge extension');
+    logger.info('Deactivating Cursor Provider Bridge extension');
 
     if (serviceManager) {
         serviceManager.dispose();
     }
 
-    logger.info('Cursor Model Bridge extension deactivated');
+    logger.info('Cursor Provider Bridge extension deactivated');
 }
 
 function registerCommands(context: vscode.ExtensionContext, services: ServiceManager): void {
     const commands = [
-        vscode.commands.registerCommand('cursor-model-bridge.start', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.start', async () => {
             try {
                 await services.startBridge();
-                vscode.window.showInformationMessage('Cursor Model Bridge started successfully');
+                vscode.window.showInformationMessage('Cursor Provider Bridge started successfully');
             } catch (error) {
                 vscode.window.showErrorMessage(
-                    `Failed to start Cursor Model Bridge: ${error instanceof Error ? error.message : String(error)}`
+                    `Failed to start Cursor Provider Bridge: ${error instanceof Error ? error.message : String(error)}`
                 );
             }
         }),
 
-        vscode.commands.registerCommand('cursor-model-bridge.stop', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.stop', async () => {
             try {
                 await services.stopBridge();
-                vscode.window.showInformationMessage('Cursor Model Bridge stopped');
+                vscode.window.showInformationMessage('Cursor Provider Bridge stopped');
             } catch (error) {
                 vscode.window.showErrorMessage(
-                    `Failed to stop Cursor Model Bridge: ${error instanceof Error ? error.message : String(error)}`
+                    `Failed to stop Cursor Provider Bridge: ${error instanceof Error ? error.message : String(error)}`
                 );
             }
         }),
 
-        vscode.commands.registerCommand('cursor-model-bridge.restart', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.restart', async () => {
             try {
                 await services.restartBridge();
-                vscode.window.showInformationMessage('Cursor Model Bridge restarted');
+                vscode.window.showInformationMessage('Cursor Provider Bridge restarted');
             } catch (error) {
                 vscode.window.showErrorMessage(
-                    `Failed to restart Cursor Model Bridge: ${error instanceof Error ? error.message : String(error)}`
+                    `Failed to restart Cursor Provider Bridge: ${error instanceof Error ? error.message : String(error)}`
                 );
             }
         }),
 
-        vscode.commands.registerCommand('cursor-model-bridge.configure', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.configure', async () => {
             try {
                 await services.showConfiguration();
             } catch (error) {
@@ -82,7 +82,7 @@ function registerCommands(context: vscode.ExtensionContext, services: ServiceMan
             }
         }),
 
-        vscode.commands.registerCommand('cursor-model-bridge.showQuickMenu', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.showQuickMenu', async () => {
             try {
                 await services.showQuickMenu();
             } catch (error) {
@@ -92,7 +92,7 @@ function registerCommands(context: vscode.ExtensionContext, services: ServiceMan
             }
         }),
 
-        vscode.commands.registerCommand('cursor-model-bridge.testConnection', async () => {
+        vscode.commands.registerCommand('cursor-provider-bridge.testConnection', async () => {
             try {
                 const isConnected = await services.testConnection();
                 

@@ -35,7 +35,7 @@ export class StatusBarManager implements vscode.Disposable {
         const items = await this.createQuickPickItems();
         
         const selection = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Cursor Model Bridge Options',
+            placeHolder: 'Cursor Provider Bridge Options',
             title: this.getQuickPickTitle()
         });
 
@@ -74,8 +74,8 @@ export class StatusBarManager implements vscode.Disposable {
     }
 
     private setupStatusBar(): void {
-        this.statusBarItem.command = 'cursor-model-bridge.showQuickMenu';
-        this.statusBarItem.tooltip = 'Cursor Model Bridge - Click for options';
+        this.statusBarItem.command = 'cursor-provider-bridge.showQuickMenu';
+        this.statusBarItem.tooltip = 'Cursor Provider Bridge - Click for options';
         this.updateStatusBar();
     }
 
@@ -89,7 +89,7 @@ export class StatusBarManager implements vscode.Disposable {
     }
 
     private getStatusBarText(status: TunnelStatus): string {
-        return 'Cursor Model Bridge';
+        return 'Cursor Provider Bridge';
     }
 
     private getStatusBarTooltip(status: TunnelStatus, config: BridgeConfiguration): string {
@@ -174,7 +174,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     private getQuickPickTitle(): string {
         const status = this.tunnelManager.getStatus();
-        return `Cursor Model Bridge ${status.isRunning ? '(Active)' : '(Offline)'}`;
+        return `Cursor Provider Bridge ${status.isRunning ? '(Active)' : '(Offline)'}`;
     }
 
     private async handleQuickPickSelection(selection: QuickPickOption): Promise<void> {
@@ -204,19 +204,19 @@ export class StatusBarManager implements vscode.Disposable {
 
     private async startBridge(): Promise<void> {
         await this.tunnelManager.start();
-        vscode.window.showInformationMessage('Cursor Model Bridge started');
+        vscode.window.showInformationMessage('Cursor Provider Bridge started');
         this.updateStatusBar();
     }
 
     private async stopBridge(): Promise<void> {
         await this.tunnelManager.stop();
-        vscode.window.showInformationMessage('Cursor Model Bridge stopped');
+        vscode.window.showInformationMessage('Cursor Provider Bridge stopped');
         this.updateStatusBar();
     }
 
     private async restartBridge(): Promise<void> {
         await this.tunnelManager.restart();
-        vscode.window.showInformationMessage('Cursor Model Bridge restarted');
+        vscode.window.showInformationMessage('Cursor Provider Bridge restarted');
         this.updateStatusBar();
     }
 

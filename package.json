@@ -1,7 +1,7 @@
 {
-  "name": "cursor-model-bridge",
-  "displayName": "Cursor Model Bridge",
-  "description": "Connect Cursor IDE to local AI models via ngrok tunneling with request transformation",
+  "name": "cursor-provider-bridge",
+  "displayName": "Cursor Provider Bridge",
+  "description": "Connect Cursor IDE to local AI providers via ngrok tunneling with request transformation",
   "version": "1.0.0",
   "publisher": "moyogi",
   "engines": {
@@ -30,65 +30,65 @@
   "contributes": {
     "commands": [
       {
-        "command": "cursor-model-bridge.start",
+        "command": "cursor-provider-bridge.start",
         "title": "Start Bridge",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-model-bridge.stop",
+        "command": "cursor-provider-bridge.stop",
         "title": "Stop Bridge",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-model-bridge.restart",
+        "command": "cursor-provider-bridge.restart",
         "title": "Restart Bridge",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-model-bridge.configure",
+        "command": "cursor-provider-bridge.configure",
         "title": "Configure Connection",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-model-bridge.showStatus",
+        "command": "cursor-provider-bridge.showStatus",
         "title": "Show Status",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-model-bridge.showQuickMenu",
+        "command": "cursor-provider-bridge.showQuickMenu",
         "title": "Show Quick Menu",
-        "category": "Cursor Model Bridge"
+        "category": "Cursor Provider Bridge"
       }
     ],
     "configuration": {
-      "title": "Cursor Model Bridge",
+      "title": "Cursor Provider Bridge",
       "properties": {
-        "cursor-model-bridge.providerUrl": {
+        "cursor-provider-bridge.providerUrl": {
           "type": "string",
           "default": "http://localhost:1234/v1",
           "description": "AI provider server URL (LM Studio, Ollama, etc.)"
         },
-        "cursor-model-bridge.autoStart": {
+        "cursor-provider-bridge.autoStart": {
           "type": "boolean",
           "default": false,
           "description": "Automatically start the bridge when VSCode opens"
         },
-        "cursor-model-bridge.showStatusBar": {
+        "cursor-provider-bridge.showStatusBar": {
           "type": "boolean",
           "default": true,
           "description": "Show status in the status bar"
         },
-        "cursor-model-bridge.ngrokAuthToken": {
+        "cursor-provider-bridge.ngrokAuthToken": {
           "type": "string",
           "default": "",
           "description": "Authentication token for ngrok for domain features"
         },
-        "cursor-model-bridge.ngrokDomain": {
+        "cursor-provider-bridge.ngrokDomain": {
           "type": "string",
           "default": "",
           "description": "Custom ngrok domain"
         },
-        "cursor-model-bridge.ngrokRegion": {
+        "cursor-provider-bridge.ngrokRegion": {
           "type": "string",
           "default": "us",
           "enum": ["us", "eu", "au", "ap", "sa", "jp", "in"],
@@ -99,22 +99,22 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "cursor-model-bridge.start"
+          "command": "cursor-provider-bridge.start"
         },
         {
-          "command": "cursor-model-bridge.stop"
+          "command": "cursor-provider-bridge.stop"
         },
         {
-          "command": "cursor-model-bridge.restart"
+          "command": "cursor-provider-bridge.restart"
         },
         {
-          "command": "cursor-model-bridge.configure"
+          "command": "cursor-provider-bridge.configure"
         },
         {
-          "command": "cursor-model-bridge.showStatus"
+          "command": "cursor-provider-bridge.showStatus"
         },
         {
-          "command": "cursor-model-bridge.showQuickMenu"
+          "command": "cursor-provider-bridge.showQuickMenu"
         }
       ]
     }
@@ -145,11 +145,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/moyogii/cursor-model-bridge"
+    "url": "https://github.com/moyogii/cursor-provider-bridge"
   },
   "bugs": {
-    "url": "https://github.com/moyogii/cursor-model-bridge/issues"
+    "url": "https://github.com/moyogii/cursor-provider-bridge/issues"
   },
-  "homepage": "https://github.com/moyogii/cursor-model-bridge#readme",
+  "homepage": "https://github.com/moyogii/cursor-provider-bridge#readme",
   "license": "GNU-3.0"
 }

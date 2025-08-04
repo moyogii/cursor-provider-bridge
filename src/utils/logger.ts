@@ -5,7 +5,7 @@ export class ExtensionLogger implements Logger {
     private readonly outputChannel: vscode.OutputChannel;
     private readonly isDebugMode: boolean;
 
-    constructor(channelName: string = 'Cursor Model Bridge') {
+    constructor(channelName: string = 'Cursor Provider Bridge') {
         this.outputChannel = vscode.window.createOutputChannel(channelName);
         this.isDebugMode = process.env.NODE_ENV === 'development';
     }

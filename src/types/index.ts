@@ -1,5 +1,5 @@
 /**
- * Core types and interfaces for the Cursor Model Bridge extension
+ * Core types and interfaces for the Cursor Provider Bridge extension
  */
 
 // Configuration types
