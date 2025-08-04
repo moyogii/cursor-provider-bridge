@@ -1,0 +1,16 @@
+out
+dist
+node_modules
+.vscode-test/
+.DS_Store
+.env
+*.log
+.git/
+*.ps1
+user-cache.json
+currency-rates.json
+.cursorignore
+package-lock.json
+CLAUDE.md
+cursor-stats-report*
+.claude/

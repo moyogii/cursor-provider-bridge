@@ -1,0 +1,155 @@
+{
+  "name": "cursor-model-bridge",
+  "displayName": "Cursor Model Bridge",
+  "description": "Connect Cursor IDE to local AI models via ngrok tunneling with request transformation",
+  "version": "1.0.0",
+  "publisher": "moyogi",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "cursor",
+    "ai",
+    "ngrok",
+    "tunnel",
+    "local models",
+    "local llms",
+    "llm",
+    "proxy",
+    "lm studio",
+    "ollama"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-model-bridge.start",
+        "title": "Start Bridge",
+        "category": "Cursor Model Bridge"
+      },
+      {
+        "command": "cursor-model-bridge.stop",
+        "title": "Stop Bridge",
+        "category": "Cursor Model Bridge"
+      },
+      {
+        "command": "cursor-model-bridge.restart",
+        "title": "Restart Bridge",
+        "category": "Cursor Model Bridge"
+      },
+      {
+        "command": "cursor-model-bridge.configure",
+        "title": "Configure Connection",
+        "category": "Cursor Model Bridge"
+      },
+      {
+        "command": "cursor-model-bridge.showStatus",
+        "title": "Show Status",
+        "category": "Cursor Model Bridge"
+      },
+      {
+        "command": "cursor-model-bridge.showQuickMenu",
+        "title": "Show Quick Menu",
+        "category": "Cursor Model Bridge"
+      }
+    ],
+    "configuration": {
+      "title": "Cursor Model Bridge",
+      "properties": {
+        "cursor-model-bridge.providerUrl": {
+          "type": "string",
+          "default": "http://localhost:1234/v1",
+          "description": "AI provider server URL (LM Studio, Ollama, etc.)"
+        },
+        "cursor-model-bridge.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start the bridge when VSCode opens"
+        },
+        "cursor-model-bridge.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show status in the status bar"
+        },
+        "cursor-model-bridge.ngrokAuthToken": {
+          "type": "string",
+          "default": "",
+          "description": "Authentication token for ngrok for domain features"
+        },
+        "cursor-model-bridge.ngrokDomain": {
+          "type": "string",
+          "default": "",
+          "description": "Custom ngrok domain"
+        },
+        "cursor-model-bridge.ngrokRegion": {
+          "type": "string",
+          "default": "us",
+          "enum": ["us", "eu", "au", "ap", "sa", "jp", "in"],
+          "description": "Ngrok region for tunnel endpoint"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "cursor-model-bridge.start"
+        },
+        {
+          "command": "cursor-model-bridge.stop"
+        },
+        {
+          "command": "cursor-model-bridge.restart"
+        },
+        {
+          "command": "cursor-model-bridge.configure"
+        },
+        {
+          "command": "cursor-model-bridge.showStatus"
+        },
+        {
+          "command": "cursor-model-bridge.showQuickMenu"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/node-fetch": "^2.6.2",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "@vscode/vsce": "^2.15.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.5.1",
+    "node-fetch": "^2.6.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moyogii/cursor-model-bridge"
+  },
+  "bugs": {
+    "url": "https://github.com/moyogii/cursor-model-bridge/issues"
+  },
+  "homepage": "https://github.com/moyogii/cursor-model-bridge#readme",
+  "license": "GNU-3.0"
+}
