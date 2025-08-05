@@ -14,3 +14,4 @@ package-lock.json
 CLAUDE.md
 cursor-stats-report*
 .claude/
+*.vsix

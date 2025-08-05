@@ -96,7 +96,15 @@
         "cursor-provider-bridge.ngrokRegion": {
           "type": "string",
           "default": "us",
-          "enum": ["us", "eu", "au", "ap", "sa", "jp", "in"],
+          "enum": [
+            "us",
+            "eu",
+            "au",
+            "ap",
+            "sa",
+            "jp",
+            "in"
+          ],
           "description": "Ngrok region for tunnel endpoint"
         }
       }
@@ -143,12 +151,12 @@
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
     "@vscode/test-electron": "^2.2.0",
-    "@vscode/vsce": "^2.15.0",
     "eslint": "^8.28.0",
     "typescript": "^4.9.4"
   },
   "dependencies": {
     "@ngrok/ngrok": "^1.5.1",
+    "@vscode/vsce": "^3.6.0",
     "node-fetch": "^2.6.7"
   },
   "repository": {
