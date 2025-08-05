@@ -6,6 +6,7 @@ import {
     IConfigurationManager,
     IModelProvider,
     ChatCompletionRequest,
+    ModelInfo,
     ModelError,
     BridgeError
 } from '../types';
@@ -107,9 +108,8 @@ export class ProxyServer {
         try {
             const parsedUrl = url.parse(requestUrl, true);
             const pathname = parsedUrl.pathname || '/';
-            const cleanPath = pathname.replace(/^\/v1/, '') || '/';
             
-            if (cleanPath === '/chat/completions' && method === 'POST') {
+            if ((pathname === '/chat/completions' || pathname === '/v1/chat/completions') && method === 'POST') {
                 await this.handleChatCompletions(req, res);
                 responseHandled = true;
             } else {
@@ -167,17 +167,8 @@ export class ProxyServer {
                 return;
             }
 
-            const chatMessages = requestData.messages;
-            if (chatMessages.length > 1 && chatMessages[1].content === 'Test prompt using gpt-3.5-turbo') {
-                const models = await this.modelProvider.getModels();
-                if (models.length > 0) {
-                    await this.forwardChatCompletionRequest(req, res, JSON.stringify({ ...requestData, model: models[0].id }));
-                } else {
-                    if (!res.headersSent) {
-                        this.sendErrorResponse(res, 503, 'No models available from provider');
-                    }
-                    return;
-                }
+            if (this.isTestPrompt(requestData)) {
+                await this.handleTestPrompt(req, res, requestData);
             } else {
                 await this.forwardChatCompletionRequest(req, res, body);
             }
@@ -199,22 +190,64 @@ export class ProxyServer {
         body: string
     ): Promise<void> {
         const config = this.configManager.getConfiguration();
-        const targetUrl = `${config.providerUrl}/chat/completions`;
+        const baseUrl = config.providerUrl.endsWith('/') ? config.providerUrl.slice(0, -1) : config.providerUrl;
+        const targetUrl = `${baseUrl}/v1/chat/completions`;
 
         await this.forwardRequestToTarget(req, res, targetUrl, body);
     }
 
     private async forwardRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
         const config = this.configManager.getConfiguration();
-        // Strip /v1 prefix from incoming URL since config.providerUrl already includes it
-        const cleanUrl = req.url?.replace(/^\/v1/, '') || '/';
-        const targetUrl = `${config.providerUrl}${cleanUrl}`;
+        const requestUrl = req.url || '/';
+        
+        const baseUrl = config.providerUrl.endsWith('/') ? config.providerUrl.slice(0, -1) : config.providerUrl;
+        
+        let path = requestUrl.startsWith('/') ? requestUrl : `/${requestUrl}`;
+        if (!path.startsWith('/v1') && this.isApiEndpoint(path)) {
+            path = `/v1${path}`;
+        }
+        
+        const targetUrl = `${baseUrl}${path}`;
         
         const body = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' 
             ? await this.readRequestBody(req) 
             : undefined;
 
         await this.forwardRequestToTarget(req, res, targetUrl, body);
+    }
+
+    private isApiEndpoint(path: string): boolean {
+        const apiEndpoints = ['/chat/completions', '/models', '/completions', '/embeddings'];
+        return apiEndpoints.some(endpoint => path === endpoint || path.startsWith(`${endpoint}?`));
+    }
+
+    private isTestPrompt(requestData: ChatCompletionRequest): boolean {
+        const messages = requestData.messages;
+        return messages.length > 1 && messages[1].content === 'Test prompt using gpt-3.5-turbo';
+    }
+
+    private async handleTestPrompt(
+        req: http.IncomingMessage,
+        res: http.ServerResponse,
+        requestData: ChatCompletionRequest
+    ): Promise<void> {
+        const models = await this.modelProvider.getModels();
+        const availableModel = this.selectNonEmbeddingModel(models);
+        
+        if (!availableModel) {
+            this.sendErrorResponse(res, 503, 'No suitable models available from provider');
+            return;
+        }
+
+        const modifiedRequest = { ...requestData, model: availableModel.id };
+        await this.forwardChatCompletionRequest(req, res, JSON.stringify(modifiedRequest));
+    }
+
+    private selectNonEmbeddingModel(models: ReadonlyArray<ModelInfo>): ModelInfo | undefined {
+        return models.find(model => 
+            !model.id.toLowerCase().includes('embed') && 
+            !model.id.toLowerCase().includes('text-embedding')
+        );
     }
 
     private async forwardRequestToTarget(
@@ -332,7 +365,6 @@ export class ProxyServer {
             res.end(JSON.stringify(errorResponse, null, 2));
         } catch (error) {
             this.logger.error('Error sending error response', error);
-            // Fallback to plain text response
             if (!res.headersSent) {
                 try {
                     res.writeHead(statusCode, { 'Content-Type': 'text/plain' });

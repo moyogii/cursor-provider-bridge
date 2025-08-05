@@ -2,7 +2,7 @@
 
 A Cursor extension that integrates local language models with the Cursor IDE Chat through secure ngrok tunneling.
 
-**Note**: This extension is specifically designed for local development environments with supported LLM providers (Ollama, LM Studio). It's important to note that each chat request will first be processed by Cursor's servers before being forwarded to your locally hosted language model. You are responsible for ensuring compliance with the terms of service and licensing agreements associated with both their chosen models and the Cursor platform.
+**Note**: This extension is specifically designed for local development environments with supported LLM providers (Ollama, LM Studio). It's important to note that each chat request will first be processed by Cursor's servers before being forwarded to your locally hosted language model. You are responsible for ensuring compliance with the terms of service and licensing agreements associated with chosen models and the Cursor platform.
 
 ## Features
 

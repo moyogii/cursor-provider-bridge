@@ -68,7 +68,6 @@ export class StatusBarManager implements vscode.Disposable {
         this.setupStatusBar();
         this.startPeriodicUpdate();
         
-        // Set initial visibility based on configuration
         const config = this.configManager.getConfiguration();
         this.updateVisibility(config.showStatusBar);
     }
@@ -115,7 +114,6 @@ export class StatusBarManager implements vscode.Disposable {
     }
 
     private startPeriodicUpdate(): void {
-        // Update status every 5 seconds
         this.updateInterval = setInterval(() => {
             this.scheduleUpdate();
         }, 5000);

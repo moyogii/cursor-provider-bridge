@@ -32,7 +32,8 @@ export class LLMModelProvider implements IModelProvider {
 
     async getModels(): Promise<ReadonlyArray<ModelInfo>> {
         const config = this.configManager.getConfiguration();
-        const url = `${config.providerUrl}/models`;
+        const baseUrl = config.providerUrl.endsWith('/') ? config.providerUrl.slice(0, -1) : config.providerUrl;
+        const url = `${baseUrl}/v1/models`;
         this.validateUrl(url);
 
         try {
@@ -79,37 +80,12 @@ export class LLMModelProvider implements IModelProvider {
         }
     }
 
-    async testConnection(): Promise<boolean> {
-        try {
-            const config = this.configManager.getConfiguration();
-            const url = `${config.providerUrl}/models`;
-            this.validateUrl(url);
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: this.createHeaders(),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-
-            const success = response.ok;
-            this.logger.debug(`Connection test result: ${success}`);
-            return success;
-        } catch (error) {
-            this.logger.debug('Connection test failed', error);
-            return false;
-        }
-    }
-
     async createChatCompletion(request: ChatCompletionRequest): Promise<AsyncIterableIterator<ChatCompletionChunk>> {
         this.validateChatCompletionRequest(request);
 
         const config = this.configManager.getConfiguration();
-        const url = `${config.providerUrl}/chat/completions`;
+        const baseUrl = config.providerUrl.endsWith('/') ? config.providerUrl.slice(0, -1) : config.providerUrl;
+        const url = `${baseUrl}/v1/chat/completions`;
         this.validateUrl(url);
 
         const requestBody = this.buildChatCompletionBody(request);
@@ -207,7 +183,6 @@ export class LLMModelProvider implements IModelProvider {
 
         try {
             while (!finished || buffer.length > 0) {
-                // Wait for data to be available
                 await this.waitForData(buffer, finished);
 
                 const lines = buffer.split('\n');
@@ -224,7 +199,6 @@ export class LLMModelProvider implements IModelProvider {
                     }
                 }
 
-                // Exit if we're finished and buffer is empty
                 if (finished && buffer.length === 0) {
                     break;
                 }
@@ -263,7 +237,6 @@ export class LLMModelProvider implements IModelProvider {
         try {
             const chunk = JSON.parse(jsonStr) as ChatCompletionChunk;
             
-            // Check for errors in the chunk
             if ('error' in chunk) {
                 throw new ModelError((chunk as any).error.message);
             }
@@ -271,7 +244,6 @@ export class LLMModelProvider implements IModelProvider {
             return chunk;
         } catch (error) {
             if (error instanceof SyntaxError) {
-                // Skip malformed JSON chunks
                 this.logger.debug('Skipping malformed JSON chunk', jsonStr);
                 return null;
             }

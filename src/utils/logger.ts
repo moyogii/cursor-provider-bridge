@@ -112,7 +112,6 @@ export class ExtensionLogger implements Logger {
     }
 }
 
-// Singleton logger instance
 let loggerInstance: ExtensionLogger | null = null;
 
 export function getLogger(): ExtensionLogger {

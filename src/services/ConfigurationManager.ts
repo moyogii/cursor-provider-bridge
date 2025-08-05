@@ -80,13 +80,10 @@ export class ConfigurationManager implements IConfigurationManager {
         const errors: string[] = [];
         const config = this.getConfiguration();
 
-        // Validate Provider URL
         if (!this.isValidUrl(config.providerUrl)) {
             errors.push('Invalid Provider URL format');
         }
 
-
-        // Validate ngrok region
         if (!NGROK_REGIONS.includes(config.ngrokRegion)) {
             errors.push('Invalid ngrok region');
         }

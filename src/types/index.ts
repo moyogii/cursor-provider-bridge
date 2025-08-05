@@ -95,7 +95,6 @@ export interface IConfigurationManager {
 export interface IModelProvider {
     getModels(): Promise<ReadonlyArray<ModelInfo>>;
     isModelLoaded(modelId: string): Promise<boolean>;
-    testConnection(): Promise<boolean>;
     createChatCompletion(request: ChatCompletionRequest): Promise<AsyncIterableIterator<ChatCompletionChunk>>;
 }
 
@@ -155,7 +154,7 @@ export class ModelError extends BridgeError {
 
 // Constants
 export const DEFAULT_CONFIGURATION: BridgeConfiguration = {
-    providerUrl: 'http://localhost:1234/v1',
+    providerUrl: 'http://localhost:1234',
     autoStart: false,
     showStatusBar: true,
     ngrokAuthToken: '',

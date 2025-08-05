@@ -74,16 +74,6 @@ export class ServiceManager implements vscode.Disposable {
         await this.statusBarManager.showQuickMenu();
     }
 
-    async testConnection(): Promise<boolean> {
-        try {
-            const result = await this.modelProvider.testConnection();
-            return result;
-        } catch (error) {
-            this.logger.error('Connection test failed', error);
-            return false;
-        }
-    }
-
     dispose(): void {
         for (const disposable of this.disposables) {
             try {
@@ -108,7 +98,7 @@ export class ServiceManager implements vscode.Disposable {
     private async handleAutoStart(): Promise<void> {
         const config = this.configManager.getConfiguration();
         
-        if (config.autoStart) {
+        if (config.autoStart && config.ngrokAuthToken) {
             try {
                 await this.startBridge();
                 vscode.window.showInformationMessage('Cursor Provider Bridge started automatically');
@@ -144,6 +134,19 @@ export class ServiceManager implements vscode.Disposable {
                     });
                 }
             }
+        } else if (config.autoStart && !config.ngrokAuthToken) {
+            this.logger.info('Auto-start is enabled but ngrok auth token is not configured');
+            vscode.window.showWarningMessage(
+                'Auto-start is enabled but ngrok authentication token is not configured. Please complete setup first.',
+                'Run Setup',
+                'Disable Auto-start'
+            ).then(selection => {
+                if (selection === 'Run Setup') {
+                    vscode.commands.executeCommand('cursor-provider-bridge.runSetup');
+                } else if (selection === 'Disable Auto-start') {
+                    vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
+                }
+            });
         }
     }
 }
