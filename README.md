@@ -6,9 +6,9 @@ A Cursor extension that integrates local language models with the Cursor IDE Cha
 
 ## Features
 
-- 🚀 **One-Click Integration**: Install extension and start using local models immediately
+- 🤖 **Local Model Integration**: Bridges the Cursor editor chat window to local providers (Ollama, LM Studio) allowing the use of open source models like Qwen3, GPT-OSS, and more.
+- 🎯 **Intuitive Setup**: Easy to configure with guided setup wizard for first-time users
 - 📊 **Visual Status**: Status bar indicators and detailed status information
-- ⚙️ **Easy Configuration**: Intuitive settings UI for all ngrok tunneling parameters
 - 🔄 **Auto-Start**: Optional automatic startup when Cursor opens
 - 🌐 **Cross-Platform**: Works on Windows, macOS, and Linux
 
