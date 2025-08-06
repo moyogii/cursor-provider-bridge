@@ -103,7 +103,7 @@ export class NgrokTunnelManager implements ITunnelManager {
         if (error?.message?.includes('PORT_IN_USE')) {
             this.logger.error('Port conflict detected', error);
             throw new TunnelError(
-                'Port 8082 is already in use. Please stop any other applications using this port or restart VS Code.',
+                'Port 8082 is already in use. Please stop any other applications using this port or restart Cursor.',
                 error
             );
         }

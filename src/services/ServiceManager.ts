@@ -21,7 +21,7 @@ export class ServiceManager implements vscode.Disposable {
     public readonly statusBarManager: StatusBarManager;
 
     constructor(context: vscode.ExtensionContext) {
-        this.configManager = new ConfigurationManager();
+        this.configManager = new ConfigurationManager(context.secrets);
         this.modelProvider = new LLMModelProvider(this.configManager);
         this.tunnelManager = createTunnelManager(this.configManager, this.modelProvider);
         this.statusBarManager = new StatusBarManager(
@@ -65,6 +65,10 @@ export class ServiceManager implements vscode.Disposable {
         await this.statusBarManager.showQuickMenu();
     }
 
+    getBridgeStatus(): { isRunning: boolean; url?: string; error?: string } {
+        return this.tunnelManager.getStatus();
+    }
+
     dispose(): void {
         for (const disposable of this.disposables) {
             try {
@@ -91,9 +95,19 @@ export class ServiceManager implements vscode.Disposable {
     }
 
     private async handleAutoStart(): Promise<void> {
-        const config = this.configManager.getConfiguration();
+        let config;
         
-        if (!config.autoStart) {return;}
+        try {
+            config = await this.configManager.getConfigurationAsync();
+        } catch (error) {
+            this.logger.error('Failed to load configuration for auto-start', error);
+            this.showSecretStorageError();
+            return;
+        }
+        
+        if (!config.autoStart) {
+            return;
+        }
 
         if (!config.ngrokAuthToken) {
             this.showAutoStartConfigError();
@@ -140,6 +154,20 @@ export class ServiceManager implements vscode.Disposable {
                 this.startBridge().catch(retryError => {
                     this.logger.error('Retry failed', retryError);
                 });
+            }
+        });
+    }
+
+    private showSecretStorageError(): void {
+        vscode.window.showErrorMessage(
+            'SecretStorage is unavailable, which is required for secure authentication token storage. The extension cannot function without secure token storage.',
+            'Run Setup',
+            'Learn More'
+        ).then(selection => {
+            if (selection === 'Run Setup') {
+                vscode.commands.executeCommand('cursor-provider-bridge.runSetup');
+            } else if (selection === 'Learn More') {
+                vscode.env.openExternal(vscode.Uri.parse('https://code.visualstudio.com/docs/editor/settings-sync#_troubleshooting'));
             }
         });
     }

@@ -37,16 +37,16 @@ export class SetupManager implements vscode.Disposable {
         return shouldShow;
     }
 
-    public async showSetupWizard(): Promise<boolean> {
+    public async showSetupWizard(): Promise<{ completed: boolean; autoStart: boolean }> {
         if (this.setupPanel) {
             this.setupPanel.reveal();
-            return false;
+            return { completed: false, autoStart: false };
         }
 
         return new Promise((resolve) => {
             let resolved = false;
             
-            const safeResolve = (value: boolean) => {
+            const safeResolve = (value: { completed: boolean; autoStart: boolean }) => {
                 if (!resolved) {
                     resolved = true;
                     resolve(value);
@@ -68,23 +68,23 @@ export class SetupManager implements vscode.Disposable {
                             try {
                                 await this.completeSetup(message.data);
                                 this.setupPanel?.dispose();
-                                safeResolve(true);
+                                safeResolve({ completed: true, autoStart: message.data.autoStart });
                             } catch (error) {
                                 this.logger.error('Setup completion failed', error);
                                 vscode.window.showErrorMessage(
                                     `Setup failed: ${error instanceof Error ? error.message : String(error)}`
                                 );
-                                safeResolve(false);
+                                safeResolve({ completed: false, autoStart: false });
                             }
                             break;
                         case 'setupCancel':
                             try {
                                 await this.skipSetup();
                                 this.setupPanel?.dispose();
-                                safeResolve(false);
+                                safeResolve({ completed: false, autoStart: false });
                             } catch (error) {
                                 this.logger.error('Setup skip failed', error);
-                                safeResolve(false);
+                                safeResolve({ completed: false, autoStart: false });
                             }
                             break;
                         case 'openAuthUrl':
@@ -93,26 +93,29 @@ export class SetupManager implements vscode.Disposable {
                     }
                 } catch (error) {
                     this.logger.error('Setup message handling failed', error);
-                    safeResolve(false);
+                    safeResolve({ completed: false, autoStart: false });
                 }
             });
 
             this.setupPanel.onDidDispose(() => {
                 this.setupPanel = undefined;
-                safeResolve(false);
+                safeResolve({ completed: false, autoStart: false });
             });
         });
     }
 
     private async completeSetup(data: SetupData): Promise<void> {
+        if (data.authToken.trim() && !this.context.secrets) {
+            this.logger.error('SecretStorage unavailable - cannot securely store authentication token');
+            throw new Error('SecretStorage is required for secure token storage but is unavailable. Please ensure your Cursor installation supports SecretStorage.');
+        }
+
         const config = vscode.workspace.getConfiguration('cursor-provider-bridge');
         
         const updates = this.buildConfigurationUpdates(data, config);
         await Promise.all(updates);
         
         this.logger.info('Setup completed successfully');
-        
-        setTimeout(() => this.handlePostSetupActions(data.autoStart), 100);
     }
 
     private buildConfigurationUpdates(data: SetupData, config: vscode.WorkspaceConfiguration): Promise<void>[] {
@@ -122,7 +125,7 @@ export class SetupManager implements vscode.Disposable {
         ];
 
         if (data.authToken.trim()) {
-            updates.push(Promise.resolve(config.update('ngrokAuthToken', data.authToken.trim(), vscode.ConfigurationTarget.Global)));
+            updates.push(Promise.resolve(this.context.secrets.store('ngrokAuthToken', data.authToken.trim())));
         }
         
         if (data.customDomain.trim()) {
@@ -134,46 +137,6 @@ export class SetupManager implements vscode.Disposable {
         }
 
         return updates;
-    }
-
-    private async handlePostSetupActions(autoStart: boolean): Promise<void> {
-        try {
-            if (autoStart) {
-                await this.startBridgeAfterSetup();
-            } else {
-                this.showStartOption();
-            }
-        } catch (error) {
-            this.logger.error('Post-setup actions failed', error);
-        }
-    }
-
-    private async startBridgeAfterSetup(): Promise<void> {
-        try {
-            await vscode.commands.executeCommand('cursor-provider-bridge.start');
-            vscode.window.showInformationMessage('Setup completed and bridge started successfully!');
-        } catch (error) {
-            this.logger.error('Auto-start failed', error);
-            vscode.window.showWarningMessage(
-                `Setup completed but auto-start failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                'Start Manually'
-            ).then(selection => {
-                if (selection === 'Start Manually') {
-                    vscode.commands.executeCommand('cursor-provider-bridge.start');
-                }
-            });
-        }
-    }
-
-    private showStartOption(): void {
-        vscode.window.showInformationMessage(
-            'Setup completed successfully!',
-            'Start Bridge'
-        ).then(selection => {
-            if (selection === 'Start Bridge') {
-                vscode.commands.executeCommand('cursor-provider-bridge.start');
-            }
-        });
     }
 
     public async skipSetup(): Promise<void> {
@@ -199,7 +162,7 @@ export class SetupManager implements vscode.Disposable {
         this.logger.info('Setup state has been reset');
         
         vscode.window.showInformationMessage(
-            'Setup state has been reset. The first-time setup will appear when you restart VS Code or reload the window.',
+            'Setup state has been reset. The first-time setup will appear when you restart Cursor or reload the window.',
             'Reload Window'
         ).then(selection => {
             if (selection === 'Reload Window') {
@@ -214,6 +177,7 @@ export class SetupManager implements vscode.Disposable {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self';">
     <title>Setup</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -296,7 +260,7 @@ export class SetupManager implements vscode.Disposable {
             font-size: 13px;
         }
         
-        input[type="text"] {
+        input[type="text"], input[type="password"] {
             width: 100%;
             padding: 12px;
             border: 1px solid rgba(255,255,255,0.2);
@@ -306,13 +270,13 @@ export class SetupManager implements vscode.Disposable {
             font-size: 14px;
         }
         
-        input[type="text"]:focus {
+        input[type="text"]:focus, input[type="password"]:focus {
             outline: none;
             border-color: rgba(255,255,255,0.4);
             background: rgba(255,255,255,0.08);
         }
         
-        input[type="text"]::placeholder { color: #777; }
+        input[type="text"]::placeholder, input[type="password"]::placeholder { color: #777; }
         
         .help { font-size: 11px; color: #999; margin-top: 4px; }
         
@@ -445,7 +409,7 @@ export class SetupManager implements vscode.Disposable {
             
             <div class="form-group">
                 <label for="authToken">Ngrok Auth Token</label>
-                <input type="text" id="authToken" placeholder="Paste your ngrok auth token here" />
+                <input type="password" id="authToken" placeholder="Paste your ngrok auth token here" />
                 <div class="help">Required for creating secure tunnels</div>
             </div>
             

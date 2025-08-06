@@ -32,7 +32,7 @@ export class ProxyServer {
         const portStatus = await this.checkPortStatus(ProxyServer.SERVER_PORT);
         if (portStatus.inUse) {
             throw new BridgeError(
-                `Port ${ProxyServer.SERVER_PORT} is already in use. Please stop any other applications using this port or restart VS Code.`,
+                `Port ${ProxyServer.SERVER_PORT} is already in use. Please stop any other applications using this port or restart Cursor.`,
                 'PORT_IN_USE'
             );
         }
@@ -331,7 +331,7 @@ export class ProxyServer {
         ];
 
         const origin = req?.headers.origin;
-        let allowedOrigin = 'null'; // Default to null for security
+        let allowedOrigin = 'null';
 
         if (origin) {
             const isAllowed = allowedOrigins.some(allowed => {

@@ -158,7 +158,6 @@ export class LLMModelProvider implements IModelProvider {
         let buffer = '';
         let finished = false;
 
-        // Set up event handlers
         reader.on('data', (chunk: Buffer) => {
             buffer += chunk.toString();
         });
@@ -177,7 +176,7 @@ export class LLMModelProvider implements IModelProvider {
                 await this.waitForData(buffer, finished);
 
                 const lines = buffer.split('\n');
-                buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
+                buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     const chunk = this.parseStreamLine(line);

@@ -119,6 +119,8 @@ export interface Logger {
 
 export interface IConfigurationManager {
     getConfiguration(): BridgeConfiguration;
+    getConfigurationAsync(): Promise<BridgeConfiguration>;
+    waitForInitialization(): Promise<void>;
     updateConfiguration<K extends ConfigurationKey>(key: K, value: BridgeConfiguration[K]): Promise<void>;
     reload(): void;
     showConfigurationQuickPick(): Promise<void>;
@@ -196,3 +198,17 @@ export const DEFAULT_CONFIGURATION: BridgeConfiguration = {
 export const NGROK_REGIONS: ReadonlyArray<NgrokRegion> = [
     'us', 'eu', 'au', 'ap', 'sa', 'jp', 'in'
 ] as const;
+
+export interface RetryConfig {
+    maxAttempts: number;
+    initialDelay: number;
+    maxDelay: number;
+    backoffMultiplier: number;
+}
+
+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
+    maxAttempts: 5,
+    initialDelay: 500,
+    maxDelay: 3000,
+    backoffMultiplier: 2
+};

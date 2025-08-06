@@ -15,43 +15,70 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(setupManager);
     registerCommands(context);
 
+    const configurationChangeListener = vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('cursor-provider-bridge')) {
+            initializeServices(context);
+        }
+    });
+    context.subscriptions.push(configurationChangeListener);
+
     setTimeout(async () => {
         try {
-            if (setupManager.shouldShowSetup()) {
+            const hasRunBefore = context.globalState.get('hasRunBefore', false);
+            
+            if (!hasRunBefore) {
+                // First time user - show setup wizard
                 await handleFirstTimeSetup(context, logger);
+                await context.globalState.update('hasRunBefore', true);
             } else {
-                initializeServices(context);
+                // Returning user - check if setup was completed
+                const setupCompleted = setupManager.isSetupCompleted();
+                const setupSkipped = setupManager.isSetupSkipped();
+                
+                if (setupCompleted || setupSkipped) {
+                    // Setup was completed or skipped - initialize services
+                    initializeServices(context);
+                } else {
+                    // Setup was never completed - show setup again
+                    await handleFirstTimeSetup(context, logger);
+                }
             }
         } catch (error) {
             logger.error('Setup initialization failed', error);
             initializeServices(context);
         }
-    }, 1000);
+    }, 100);
 
     logger.info('Cursor Provider Bridge extension activated successfully');
 }
 
 async function handleFirstTimeSetup(context: vscode.ExtensionContext, logger: Logger): Promise<void> {
     logger.info('First-time setup required');
-    
+
     const result = await vscode.window.showInformationMessage(
         'Welcome to Cursor Provider Bridge! Let\'s set up your connection to local AI providers.',
         { modal: false },
         'Start Setup',
         'Skip for Now'
     );
-    
+
     if (result === 'Start Setup') {
-        const completed = await setupManager.showSetupWizard().catch((error) => {
+        const setupResult = await setupManager.showSetupWizard().catch((error) => {
             logger.error('Setup wizard failed', error);
             vscode.window.showErrorMessage(
                 `Setup failed: ${error instanceof Error ? error.message : String(error)}`
             );
-            return false;
+            return { completed: false, autoStart: false };
         });
 
-        if (completed) {
+        if (setupResult.completed) {
             initializeServices(context);
+
+            if (setupResult.autoStart) {
+                await handleAutoStartAfterSetup();
+            } else {
+                showSetupCompletedMessage();
+            }
         } else if (setupManager.isSetupSkipped()) {
             showSetupSkippedMessage();
         }
@@ -61,6 +88,53 @@ async function handleFirstTimeSetup(context: vscode.ExtensionContext, logger: Lo
             'Setup skipped. You can run setup anytime using "Cursor Provider Bridge: Run Setup" from the Command Palette.'
         );
     }
+}
+
+async function handleAutoStartAfterSetup(): Promise<void> {
+    const logger = getLogger();
+    
+    if (!serviceManager) {
+        logger.error('ServiceManager not initialized, cannot auto-start');
+        const selection = await vscode.window.showWarningMessage(
+            'Setup completed but auto-start failed: Service not ready',
+            'Start Manually'
+        );
+        if (selection === 'Start Manually') {
+            await vscode.commands.executeCommand('cursor-provider-bridge.start');
+        }
+        return;
+    }
+
+    try {
+        await serviceManager.startBridge();
+        await vscode.window.showInformationMessage('Setup completed and bridge started successfully!');
+    } catch (error) {
+        logger.error('Auto-start failed after setup', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (errorMessage.includes('already running')) {
+            await vscode.window.showInformationMessage('Setup completed! Bridge is already running and ready to use.');
+        } else {
+            const selection = await vscode.window.showWarningMessage(
+                `Setup completed but auto-start failed: ${errorMessage}`,
+                'Start Manually'
+            );
+            if (selection === 'Start Manually') {
+                await vscode.commands.executeCommand('cursor-provider-bridge.start');
+            }
+        }
+    }
+}
+
+function showSetupCompletedMessage(): void {
+    vscode.window.showInformationMessage(
+        'Setup completed successfully!',
+        'Start Bridge'
+    ).then(selection => {
+        if (selection === 'Start Bridge') {
+            vscode.commands.executeCommand('cursor-provider-bridge.start');
+        }
+    });
 }
 
 function showSetupSkippedMessage(): void {
@@ -76,12 +150,11 @@ function showSetupSkippedMessage(): void {
 
 function initializeServices(context: vscode.ExtensionContext): void {
     const logger = getLogger();
-    
+
     try {
         serviceManager = new ServiceManager(context);
         context.subscriptions.push(serviceManager);
-        
-        
+
         logger.info('Services initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize services', error);
@@ -117,7 +190,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
             });
             return true;
         }
-        
+
         return false;
     };
 
@@ -126,11 +199,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (requiresSetup()) {
                 return;
             }
-            
+
             if (!serviceManager) {
                 initializeServices(context);
             }
-            
+
             try {
                 await serviceManager.startBridge();
                 vscode.window.showInformationMessage('Cursor Provider Bridge started successfully');
@@ -145,11 +218,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (requiresSetup()) {
                 return;
             }
-            
+
             if (!serviceManager) {
                 initializeServices(context);
             }
-            
+
             try {
                 await serviceManager.stopBridge();
                 vscode.window.showInformationMessage('Cursor Provider Bridge stopped');
@@ -164,11 +237,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (requiresSetup()) {
                 return;
             }
-            
+
             if (!serviceManager) {
                 initializeServices(context);
             }
-            
+
             try {
                 await serviceManager.restartBridge();
                 vscode.window.showInformationMessage('Cursor Provider Bridge restarted');
@@ -183,11 +256,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (requiresSetup()) {
                 return;
             }
-            
+
             if (!serviceManager) {
                 initializeServices(context);
             }
-            
+
             try {
                 await serviceManager.showConfiguration();
             } catch (error) {
@@ -201,11 +274,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (requiresSetup()) {
                 return;
             }
-            
+
             if (!serviceManager) {
                 initializeServices(context);
             }
-            
+
             try {
                 await serviceManager.showQuickMenu();
             } catch (error) {
@@ -217,9 +290,19 @@ function registerCommands(context: vscode.ExtensionContext): void {
 
         vscode.commands.registerCommand('cursor-provider-bridge.runSetup', async () => {
             try {
-                const completed = await setupManager.showSetupWizard();
-                if (completed && !serviceManager) {
-                    initializeServices(context);
+                const setupResult = await setupManager.showSetupWizard();
+                if (setupResult.completed) {
+                    if (!serviceManager) {
+                        initializeServices(context);
+                    }
+
+                    setTimeout(async () => {
+                        if (setupResult.autoStart) {
+                            await handleAutoStartAfterSetup();
+                        } else {
+                            showSetupCompletedMessage();
+                        }
+                    }, 2000);
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(
