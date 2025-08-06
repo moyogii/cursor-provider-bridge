@@ -16,7 +16,7 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
     ]);
 }
 
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+export function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): T {
     let timeout: NodeJS.Timeout | null = null;
     
     return ((...args: Parameters<T>) => {
