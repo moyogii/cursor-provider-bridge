@@ -27,19 +27,15 @@ export function activate(context: vscode.ExtensionContext): void {
             const hasRunBefore = context.globalState.get('hasRunBefore', false);
             
             if (!hasRunBefore) {
-                // First time user - show setup wizard
                 await handleFirstTimeSetup(context, logger);
                 await context.globalState.update('hasRunBefore', true);
             } else {
-                // Returning user - check if setup was completed
                 const setupCompleted = setupManager.isSetupCompleted();
                 const setupSkipped = setupManager.isSetupSkipped();
                 
                 if (setupCompleted || setupSkipped) {
-                    // Setup was completed or skipped - initialize services
                     initializeServices(context);
                 } else {
-                    // Setup was never completed - show setup again
                     await handleFirstTimeSetup(context, logger);
                 }
             }
