@@ -97,7 +97,7 @@ export class ProxyServer {
         
         this.logger.debug(`${method} ${requestUrl}`);
 
-        this.setCorsHeaders(res);
+        this.setCorsHeaders(res, req);
         if (method === 'OPTIONS') {
             res.writeHead(200);
             res.end();
@@ -318,11 +318,41 @@ export class ProxyServer {
         });
     }
 
-    private setCorsHeaders(res: http.ServerResponse): void {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    private setCorsHeaders(res: http.ServerResponse, req?: http.IncomingMessage): void {
+        const allowedOrigins = [
+            'vscode-webview://',
+            'https://api2.cursor.sh',
+            'https://api3.cursor.sh', 
+            'https://repo42.cursor.sh',
+            'https://api4.cursor.sh',
+            'https://us-asia.gcpp.cursor.sh',
+            'https://us-eu.gcpp.cursor.sh',
+            'https://us-only.gcpp.cursor.sh'
+        ];
+
+        const origin = req?.headers.origin;
+        let allowedOrigin = 'null'; // Default to null for security
+
+        if (origin) {
+            const isAllowed = allowedOrigins.some(allowed => {
+                if (allowed.startsWith('vscode-webview://')) {
+                    return origin.startsWith('vscode-webview://');
+                }
+                return origin === allowed;
+            });
+
+            if (isAllowed) {
+                allowedOrigin = origin;
+            } else {
+                this.logger.warn(`Blocked CORS request from unauthorized origin: ${origin}`);
+            }
+        }
+
+        res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         res.setHeader('Access-Control-Max-Age', '86400');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
     private safeEndResponse(res: http.ServerResponse): void {
