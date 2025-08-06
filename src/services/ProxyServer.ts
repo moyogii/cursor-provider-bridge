@@ -1,7 +1,7 @@
 import * as http from 'http';
 import * as url from 'url';
 import * as net from 'net';
-import fetch from 'node-fetch';
+import { httpRequest } from '../utils/httpClient';
 import {
     IConfigurationManager,
     IModelProvider,
@@ -45,7 +45,7 @@ export class ProxyServer {
                 });
             });
 
-            this.server.on('error', (error: any) => {
+            this.server.on('error', (error: NodeJS.ErrnoException) => {
                 this.logger.error('Proxy server error', error);
                 this.isRunning = false;
                 if (error.code === 'EADDRINUSE') {
@@ -94,7 +94,6 @@ export class ProxyServer {
         const startTime = Date.now();
         const method = req.method || 'GET';
         const requestUrl = req.url || '/';
-        let responseHandled = false;
         
         this.logger.debug(`${method} ${requestUrl}`);
 
@@ -106,73 +105,48 @@ export class ProxyServer {
         }
 
         try {
-            const parsedUrl = url.parse(requestUrl, true);
-            const pathname = parsedUrl.pathname || '/';
-            
-            if ((pathname === '/chat/completions' || pathname === '/v1/chat/completions') && method === 'POST') {
-                await this.handleChatCompletions(req, res);
-                responseHandled = true;
-            } else {
-                await this.forwardRequest(req, res);
-                responseHandled = true;
-            }
-
-            const duration = Date.now() - startTime;
-            this.logger.debug(`${method} ${requestUrl} completed in ${duration}ms`);
-
+            await this.routeRequest(req, res, requestUrl, method);
+            this.logger.debug(`${method} ${requestUrl} completed in ${Date.now() - startTime}ms`);
         } catch (error) {
-            this.logger.error(`Error handling ${method} ${requestUrl}`, error);
-            
-            if (!responseHandled && !res.headersSent) {
-                this.sendErrorResponse(res, 500, 'Internal Server Error');
-            } else {
-                this.safeEndResponse(res);
-            }
+            this.handleRequestError(error, method, requestUrl, res);
+        }
+    }
+
+    private async routeRequest(req: http.IncomingMessage, res: http.ServerResponse, requestUrl: string, method: string): Promise<void> {
+        const pathname = url.parse(requestUrl, true).pathname || '/';
+        const isChatEndpoint = (pathname === '/chat/completions' || pathname === '/v1/chat/completions') && method === 'POST';
+        
+        if (isChatEndpoint) {
+            await this.handleChatCompletions(req, res);
+        } else {
+            await this.forwardRequest(req, res);
+        }
+    }
+
+    private handleRequestError(error: unknown, method: string, requestUrl: string, res: http.ServerResponse): void {
+        this.logger.error(`Error handling ${method} ${requestUrl}`, error);
+        
+        if (!res.headersSent) {
+            this.sendErrorResponse(res, 500, 'Internal Server Error');
+        } else {
+            this.safeEndResponse(res);
         }
     }
 
     private async handleChatCompletions(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-        if (res.headersSent) {
-            return;
-        }
+        if (res.headersSent) {return;}
 
         const body = await this.readRequestBody(req);
+        const requestData = this.parseAndValidateRequest(body, res);
         
-        let requestData: ChatCompletionRequest;
-        try {
-            requestData = JSON.parse(body);
-        } catch (error) {
-            if (!res.headersSent) {
-                this.sendErrorResponse(res, 400, 'Invalid JSON in request body');
-            }
-            return;
-        }
-
-        if (!requestData.model) {
-            if (!res.headersSent) {
-                this.sendErrorResponse(res, 400, 'Model field is required');
-            }
-            return;
-        }
-
-        if (!requestData.messages || !Array.isArray(requestData.messages) || requestData.messages.length === 0) {
-            if (!res.headersSent) {
-                this.sendErrorResponse(res, 400, 'Messages field is required and must be a non-empty array');
-            }
-            return;
-        }
+        if (!requestData || res.headersSent) {return;}
 
         try {
-            if (res.headersSent) {
-                return;
-            }
-
             if (this.isTestPrompt(requestData)) {
                 await this.handleTestPrompt(req, res, requestData);
             } else {
                 await this.forwardChatCompletionRequest(req, res, body);
             }
-
         } catch (error) {
             this.logger.error('Error in chat completions handler', error);
             const errorMessage = error instanceof ModelError ? error.message : 'Internal server error';
@@ -182,8 +156,28 @@ export class ProxyServer {
         }
     }
 
+    private parseAndValidateRequest(body: string, res: http.ServerResponse): ChatCompletionRequest | null {
+        let requestData: ChatCompletionRequest;
+        
+        try {
+            requestData = JSON.parse(body);
+        } catch {
+            this.sendErrorResponse(res, 400, 'Invalid JSON in request body');
+            return null;
+        }
 
+        if (!requestData.model) {
+            this.sendErrorResponse(res, 400, 'Model field is required');
+            return null;
+        }
 
+        if (!requestData.messages || !Array.isArray(requestData.messages) || requestData.messages.length === 0) {
+            this.sendErrorResponse(res, 400, 'Messages field is required and must be a non-empty array');
+            return null;
+        }
+
+        return requestData;
+    }
     private async forwardChatCompletionRequest(
         req: http.IncomingMessage, 
         res: http.ServerResponse, 
@@ -256,52 +250,23 @@ export class ProxyServer {
         targetUrl: string,
         body?: string
     ): Promise<void> {
-        if (res.headersSent) {
-            return;
-        }
+        if (res.headersSent) {return;}
 
         try {
-            const headers: Record<string, string> = {};
-            
-            if (req.headers['content-type']) {
-                headers['Content-Type'] = req.headers['content-type'] as string;
-            }
-            if (req.headers['authorization']) {
-                headers['Authorization'] = req.headers['authorization'] as string;
-            }
-            if (req.headers['user-agent']) {
-                headers['User-Agent'] = req.headers['user-agent'] as string;
-            }
+            const headers = this.extractRequestHeaders(req);
+            const httpOptions = { method: req.method, headers, body, stream: true };
+            const response = await httpRequest(targetUrl, httpOptions);
 
-            const fetchOptions: any = {
-                method: req.method,
-                headers
-            };
+            if (res.headersSent) {return;}
 
-            if (body) {
-                fetchOptions.body = body;
-            }
-
-            const response = await fetch(targetUrl, fetchOptions);
-
-            if (res.headersSent) {
-                return;
-            }
-
-            const responseHeaders: Record<string, string> = {};
-            for (const [key, value] of response.headers.entries()) {
-                if (key.toLowerCase() !== 'transfer-encoding') {
-                    responseHeaders[key] = value;
-                }
-            }
-
+            const responseHeaders = this.filterResponseHeaders(response.headers);
             res.writeHead(response.status, response.statusText, responseHeaders);
+            
             if (response.body) {
                 response.body.pipe(res);
             } else {
                 res.end();
             }
-
         } catch (error) {
             this.logger.error('Error forwarding request', error);
             if (!res.headersSent) {
@@ -310,6 +275,29 @@ export class ProxyServer {
                 this.safeEndResponse(res);
             }
         }
+    }
+
+    private extractRequestHeaders(req: http.IncomingMessage): Record<string, string> {
+        const headers: Record<string, string> = {};
+        const relevantHeaders = ['content-type', 'authorization', 'user-agent'];
+        
+        for (const header of relevantHeaders) {
+            if (req.headers[header]) {
+                headers[header.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('-')] = req.headers[header] as string;
+            }
+        }
+        
+        return headers;
+    }
+
+    private filterResponseHeaders(headers: Map<string, string>): Record<string, string> {
+        const responseHeaders: Record<string, string> = {};
+        for (const [key, value] of headers.entries()) {
+            if (key.toLowerCase() !== 'transfer-encoding') {
+                responseHeaders[key] = value;
+            }
+        }
+        return responseHeaders;
     }
 
     private async readRequestBody(req: http.IncomingMessage): Promise<string> {
@@ -385,9 +373,6 @@ export class ProxyServer {
         }
     }
 
-    /**
-     * Check if a port is currently in use
-     */
     private async checkPortStatus(port: number): Promise<{ inUse: boolean; error?: Error }> {
         return new Promise((resolve) => {
             const server = net.createServer();
@@ -398,7 +383,7 @@ export class ProxyServer {
                 });
             });
             
-            server.on('error', (error: any) => {
+            server.on('error', (error: NodeJS.ErrnoException) => {
                 if (error.code === 'EADDRINUSE') {
                     resolve({ inUse: true, error });
                 } else {

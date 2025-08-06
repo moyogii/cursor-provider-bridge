@@ -1,12 +1,13 @@
-import fetch, { Response } from 'node-fetch';
+import { httpRequest } from '../utils/httpClient';
 import {
     IModelProvider,
     IConfigurationManager,
     ModelInfo,
     ChatCompletionRequest,
     ChatCompletionChunk,
+    ChatCompletionError,
     ModelError,
-    Result
+    HttpResponse
 } from '../types';
 import { getLogger } from '../utils/logger';
 
@@ -37,16 +38,11 @@ export class LLMModelProvider implements IModelProvider {
         this.validateUrl(url);
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), LLMModelProvider.REQUEST_TIMEOUT);
-            
-            const response = await fetch(url, {
+            const response = await httpRequest(url, {
                 method: 'GET',
                 headers: this.createHeaders(),
-                signal: controller.signal
+                timeout: LLMModelProvider.REQUEST_TIMEOUT
             });
-            
-            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new ModelError(
@@ -90,20 +86,15 @@ export class LLMModelProvider implements IModelProvider {
 
         const requestBody = this.buildChatCompletionBody(request);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), LLMModelProvider.REQUEST_TIMEOUT);
-        
-        const response = await fetch(url, {
+        const response = await httpRequest(url, {
             method: 'POST',
             headers: {
                 ...this.createHeaders(),
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(requestBody),
-            signal: controller.signal
+            timeout: LLMModelProvider.REQUEST_TIMEOUT
         });
-        
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new ModelError(
@@ -158,7 +149,7 @@ export class LLMModelProvider implements IModelProvider {
         }
     }
 
-    private async* parseStreamingResponse(response: Response): AsyncIterableIterator<ChatCompletionChunk> {
+    private async* parseStreamingResponse(response: HttpResponse): AsyncIterableIterator<ChatCompletionChunk> {
         if (!response.body) {
             throw new ModelError('No response body received from AI provider');
         }
@@ -238,7 +229,8 @@ export class LLMModelProvider implements IModelProvider {
             const chunk = JSON.parse(jsonStr) as ChatCompletionChunk;
             
             if ('error' in chunk) {
-                throw new ModelError((chunk as any).error.message);
+                const errorChunk = chunk as ChatCompletionError;
+                throw new ModelError(errorChunk.error.message);
             }
             
             return chunk;
