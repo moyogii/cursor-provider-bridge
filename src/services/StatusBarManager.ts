@@ -25,7 +25,6 @@ export class StatusBarManager implements vscode.Disposable {
             100
         );
 
-        // Simple debounced update implementation
 
         this.initialize();
         this.logger.debug('Status bar manager initialized');
