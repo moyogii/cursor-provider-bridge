@@ -9,7 +9,8 @@ module.exports = {
     libraryTarget: 'commonjs2'
   },
   externals: {
-    vscode: 'commonjs vscode'
+    vscode: 'commonjs vscode',
+    '@ngrok/ngrok': 'commonjs @ngrok/ngrok'
   },
   resolve: {
     extensions: ['.ts', '.js']
