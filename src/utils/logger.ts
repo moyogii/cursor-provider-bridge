@@ -54,7 +54,7 @@ export class ExtensionLogger implements Logger {
         'refresh_token', 'privatekey', 'private_key'
     ]);
 
-    private sanitizeObject(obj: any, depth = 0): any {
+    private sanitizeObject(obj: unknown, depth = 0): unknown {
         if (depth > 10) {
             return '[Max depth reached]';
         }
@@ -71,7 +71,7 @@ export class ExtensionLogger implements Logger {
         }
         
         if (typeof obj === 'object') {
-            const sanitized: any = {};
+            const sanitized: Record<string, unknown> = {};
             for (const [key, value] of Object.entries(obj)) {
                 const lowerKey = key.toLowerCase();
                 if (this.SENSITIVE_FIELDS.has(lowerKey) || lowerKey.includes('password') || lowerKey.includes('token')) {
