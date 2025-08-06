@@ -1,8 +1,3 @@
-/**
- * Core types and interfaces for the Cursor Provider Bridge extension
- */
-
-// Configuration types
 export interface BridgeConfiguration {
     readonly providerUrl: string;
     readonly autoStart: boolean;
@@ -16,14 +11,13 @@ export type NgrokRegion = 'us' | 'eu' | 'au' | 'ap' | 'sa' | 'jp' | 'in';
 
 export type ConfigurationKey = keyof BridgeConfiguration;
 
-// Status types
 export interface TunnelStatus {
     readonly isRunning: boolean;
+    readonly isStarting?: boolean;
     readonly url?: string;
     readonly error?: string;
 }
 
-// Model types
 export interface ModelInfo {
     readonly id: string;
     readonly object: string;
@@ -62,19 +56,60 @@ export interface ChatCompletionChunk {
     }>;
 }
 
-// UI types
+export interface ChatCompletionError {
+    readonly error: {
+        readonly message: string;
+        readonly type?: string;
+        readonly code?: string;
+    };
+}
+
 export interface QuickPickOption {
     readonly label: string;
     readonly description?: string;
     readonly detail?: string;
 }
 
-// Result types
+export interface SetupData {
+    readonly authToken: string;
+    readonly customDomain: string;
+    readonly providerUrl: string;
+    readonly autoStart: boolean;
+}
+
+export interface NgrokTunnel {
+    url(): string | null;
+    close(): Promise<void>;
+}
+
+export interface NgrokOptions {
+    addr: string;
+    region: NgrokRegion;
+    authtoken?: string;
+    domain?: string;
+    [key: string]: unknown;
+}
+
+export interface HttpResponse {
+    readonly ok: boolean;
+    readonly status: number;
+    readonly statusText: string;
+    readonly headers: Map<string, string>;
+    readonly body?: NodeJS.ReadableStream;
+    json(): Promise<unknown>;
+    text(): Promise<string>;
+}
+
+export interface TunnelStartResult {
+    readonly tunnel: NgrokTunnel;
+    readonly url: string;
+    readonly proxyPort: number;
+}
+
 export type Result<T, E = Error> = 
     | { readonly success: true; readonly data: T }
     | { readonly success: false; readonly error: E };
 
-// Logger interface
 export interface Logger {
     info(message: string, ...args: unknown[]): void;
     warn(message: string, ...args: unknown[]): void;
@@ -82,7 +117,6 @@ export interface Logger {
     debug(message: string, ...args: unknown[]): void;
 }
 
-// Service interfaces
 export interface IConfigurationManager {
     getConfiguration(): BridgeConfiguration;
     updateConfiguration<K extends ConfigurationKey>(key: K, value: BridgeConfiguration[K]): Promise<void>;
@@ -107,7 +141,6 @@ export interface ITunnelManager {
     dispose(): void;
 }
 
-// Events
 export interface ConfigurationChangedEvent {
     readonly key: ConfigurationKey;
     readonly oldValue: unknown;
@@ -119,7 +152,6 @@ export interface TunnelStatusChangedEvent {
     readonly newStatus: TunnelStatus;
 }
 
-// Error types
 export class BridgeError extends Error {
     constructor(
         message: string,
@@ -152,7 +184,6 @@ export class ModelError extends BridgeError {
     }
 }
 
-// Constants
 export const DEFAULT_CONFIGURATION: BridgeConfiguration = {
     providerUrl: 'http://localhost:1234',
     autoStart: false,

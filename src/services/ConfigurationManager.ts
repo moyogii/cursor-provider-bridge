@@ -195,7 +195,7 @@ export class ConfigurationManager implements IConfigurationManager {
 
         if (newValue !== undefined && newValue !== currentValue) {
             try {
-                await this.updateConfiguration(key, newValue as any);
+                await this.updateConfiguration(key as ConfigurationKey, newValue as BridgeConfiguration[ConfigurationKey]);
                 vscode.window.showInformationMessage(`${key} updated successfully`);
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to update ${key}: ${error}`);
