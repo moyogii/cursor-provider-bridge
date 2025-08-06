@@ -21,33 +21,24 @@ export class ServiceManager implements vscode.Disposable {
     public readonly statusBarManager: StatusBarManager;
 
     constructor(context: vscode.ExtensionContext) {
-        try {
-            this.configManager = new ConfigurationManager();
-            this.modelProvider = new LLMModelProvider(this.configManager);
-            this.tunnelManager = createTunnelManager(this.configManager, this.modelProvider);
-            this.statusBarManager = new StatusBarManager(
-                this.configManager,
-                this.modelProvider,
-                this.tunnelManager
-            );
+        this.configManager = new ConfigurationManager();
+        this.modelProvider = new LLMModelProvider(this.configManager);
+        this.tunnelManager = createTunnelManager(this.configManager, this.modelProvider);
+        this.statusBarManager = new StatusBarManager(
+            this.configManager,
+            this.modelProvider,
+            this.tunnelManager
+        );
 
-            this.disposables.push(
-                this.tunnelManager,
-                this.statusBarManager,
-                this.configManager as vscode.Disposable
-            );
+        this.disposables.push(
+            this.tunnelManager,
+            this.statusBarManager,
+            this.configManager as vscode.Disposable
+        );
 
-            this.setupConfigurationHandling();
-
-            const initialConfig = this.configManager.getConfiguration();
-            this.statusBarManager.updateVisibility(initialConfig.showStatusBar);
-
-            this.handleAutoStart();
-        } catch (error) {
-            this.logger.error('Failed to initialize services', error);
-            this.dispose();
-            throw error;
-        }
+        this.setupConfigurationHandling();
+        this.initializeStatusBar();
+        this.handleAutoStart();
     }
 
     getConfiguration(): BridgeConfiguration {
@@ -91,62 +82,65 @@ export class ServiceManager implements vscode.Disposable {
         const configDisposable = this.configManager.onConfigurationChanged((config: BridgeConfiguration) => {
             this.statusBarManager.updateVisibility(config.showStatusBar);
         });
-
         this.disposables.push(configDisposable);
+    }
+
+    private initializeStatusBar(): void {
+        const config = this.configManager.getConfiguration();
+        this.statusBarManager.updateVisibility(config.showStatusBar);
     }
 
     private async handleAutoStart(): Promise<void> {
         const config = this.configManager.getConfiguration();
         
-        if (config.autoStart && config.ngrokAuthToken) {
-            try {
-                await this.startBridge();
-                vscode.window.showInformationMessage('Cursor Provider Bridge started automatically');
-            } catch (error) {
-                this.logger.error('Auto-start failed', error);
-                
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                
-                if (errorMessage.includes('Port 8082 is already in use')) {
-                    vscode.window.showWarningMessage(
-                        'Auto-start failed: Port 8082 is already in use. Please stop any other applications using this port or disable auto-start.',
-                        'Disable Auto-start',
-                        'Try Again'
-                    ).then(selection => {
-                        if (selection === 'Disable Auto-start') {
-                            vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
-                        } else if (selection === 'Try Again') {
-                            this.startBridge().catch(retryError => {
-                                this.logger.error('Retry failed', retryError);
-                            });
-                        }
-                    });
-                } else {
-                    vscode.window.showWarningMessage(
-                        `Failed to auto-start Cursor Bridge: ${errorMessage}`,
-                        'Retry'
-                    ).then(selection => {
-                        if (selection === 'Retry') {
-                            this.startBridge().catch(retryError => {
-                                this.logger.error('Retry failed', retryError);
-                            });
-                        }
-                    });
-                }
-            }
-        } else if (config.autoStart && !config.ngrokAuthToken) {
-            this.logger.info('Auto-start is enabled but ngrok auth token is not configured');
-            vscode.window.showWarningMessage(
-                'Auto-start is enabled but ngrok authentication token is not configured. Please complete setup first.',
-                'Run Setup',
-                'Disable Auto-start'
-            ).then(selection => {
-                if (selection === 'Run Setup') {
-                    vscode.commands.executeCommand('cursor-provider-bridge.runSetup');
-                } else if (selection === 'Disable Auto-start') {
-                    vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
-                }
-            });
+        if (!config.autoStart) {return;}
+
+        if (!config.ngrokAuthToken) {
+            this.showAutoStartConfigError();
+            return;
         }
+
+        try {
+            await this.startBridge();
+            vscode.window.showInformationMessage('Cursor Provider Bridge started automatically');
+        } catch (error) {
+            this.handleAutoStartError(error);
+        }
+    }
+
+    private showAutoStartConfigError(): void {
+        vscode.window.showWarningMessage(
+            'Auto-start enabled but ngrok token not configured. Complete setup first.',
+            'Run Setup',
+            'Disable Auto-start'
+        ).then(selection => {
+            if (selection === 'Run Setup') {
+                vscode.commands.executeCommand('cursor-provider-bridge.runSetup');
+            } else if (selection === 'Disable Auto-start') {
+                vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
+            }
+        });
+    }
+
+    private handleAutoStartError(error: unknown): void {
+        this.logger.error('Auto-start failed', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        const isPortError = errorMessage.includes('Port 8082 is already in use');
+        const message = isPortError 
+            ? 'Auto-start failed: Port 8082 is already in use. Stop other applications using this port or disable auto-start.'
+            : `Auto-start failed: ${errorMessage}`;
+
+        const actions = isPortError ? ['Disable Auto-start', 'Try Again'] : ['Retry'];
+
+        vscode.window.showWarningMessage(message, ...actions).then(selection => {
+            if (selection === 'Disable Auto-start') {
+                vscode.workspace.getConfiguration().update('cursor-provider-bridge.autoStart', false, true);
+            } else if (selection === 'Try Again' || selection === 'Retry') {
+                this.startBridge().catch(retryError => {
+                    this.logger.error('Retry failed', retryError);
+                });
+            }
+        });
     }
 }

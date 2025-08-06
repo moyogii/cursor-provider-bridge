@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { getLogger } from '../utils/logger';
+import { SetupData } from '../types';
 
 export class SetupManager implements vscode.Disposable {
     private readonly logger = getLogger();
@@ -19,7 +20,21 @@ export class SetupManager implements vscode.Disposable {
     }
 
     public shouldShowSetup(): boolean {
-        return !this.isSetupCompleted() && !this.isSetupSkipped();
+        const hasRunBefore = this.context.globalState.get('hasRunBefore', false);
+        const setupCompleted = this.isSetupCompleted();
+        const setupSkipped = this.isSetupSkipped();
+        
+        this.logger.info(`Setup check: hasRunBefore=${hasRunBefore}, setupCompleted=${setupCompleted}, setupSkipped=${setupSkipped}`);
+        
+        if (!hasRunBefore) {
+            this.context.globalState.update('hasRunBefore', true);
+            this.logger.info('First-time extension run detected, showing setup');
+            return true;
+        }
+        
+        const shouldShow = !setupCompleted && !setupSkipped;
+        this.logger.info(`Should show setup: ${shouldShow}`);
+        return shouldShow;
     }
 
     public async showSetupWizard(): Promise<boolean> {
@@ -29,6 +44,15 @@ export class SetupManager implements vscode.Disposable {
         }
 
         return new Promise((resolve) => {
+            let resolved = false;
+            
+            const safeResolve = (value: boolean) => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(value);
+                }
+            };
+
             this.setupPanel = vscode.window.createWebviewPanel(
                 'cursorProviderBridgeSetup',
                 'Cursor Provider Bridge - Setup',
@@ -41,14 +65,27 @@ export class SetupManager implements vscode.Disposable {
                 try {
                     switch (message.command) {
                         case 'setupComplete':
-                            await this.completeSetup(message.data);
-                            this.setupPanel?.dispose();
-                            resolve(true);
+                            try {
+                                await this.completeSetup(message.data);
+                                this.setupPanel?.dispose();
+                                safeResolve(true);
+                            } catch (error) {
+                                this.logger.error('Setup completion failed', error);
+                                vscode.window.showErrorMessage(
+                                    `Setup failed: ${error instanceof Error ? error.message : String(error)}`
+                                );
+                                safeResolve(false);
+                            }
                             break;
                         case 'setupCancel':
-                            await this.skipSetup();
-                            this.setupPanel?.dispose();
-                            resolve(false);
+                            try {
+                                await this.skipSetup();
+                                this.setupPanel?.dispose();
+                                safeResolve(false);
+                            } catch (error) {
+                                this.logger.error('Setup skip failed', error);
+                                safeResolve(false);
+                            }
                             break;
                         case 'openAuthUrl':
                             vscode.env.openExternal(vscode.Uri.parse('https://dashboard.ngrok.com/get-started/your-authtoken'));
@@ -56,34 +93,58 @@ export class SetupManager implements vscode.Disposable {
                     }
                 } catch (error) {
                     this.logger.error('Setup message handling failed', error);
+                    safeResolve(false);
                 }
             });
 
             this.setupPanel.onDidDispose(() => {
                 this.setupPanel = undefined;
-                resolve(false);
+                safeResolve(false);
             });
         });
     }
 
-    private async completeSetup(data: { authToken: string; customDomain: string; providerUrl: string; autoStart: boolean }): Promise<void> {
+    private async completeSetup(data: SetupData): Promise<void> {
         const config = vscode.workspace.getConfiguration('cursor-provider-bridge');
         
-        const updates = [
-            data.authToken.trim() && config.update('ngrokAuthToken', data.authToken.trim(), vscode.ConfigurationTarget.Global),
-            data.customDomain.trim() && config.update('ngrokDomain', data.customDomain.trim(), vscode.ConfigurationTarget.Global),
-            data.providerUrl.trim() && config.update('providerUrl', data.providerUrl.trim(), vscode.ConfigurationTarget.Global),
-            config.update('autoStart', data.autoStart, vscode.ConfigurationTarget.Global),
-            this.context.globalState.update('setupCompleted', true)
-        ].filter(Boolean);
-
+        const updates = this.buildConfigurationUpdates(data, config);
         await Promise.all(updates);
+        
         this.logger.info('Setup completed successfully');
+        
+        setTimeout(() => this.handlePostSetupActions(data.autoStart), 100);
+    }
 
-        if (data.autoStart) {
-            await this.startBridgeAfterSetup();
-        } else {
-            this.showStartOption();
+    private buildConfigurationUpdates(data: SetupData, config: vscode.WorkspaceConfiguration): Promise<void>[] {
+        const updates: Promise<void>[] = [
+            Promise.resolve(config.update('autoStart', data.autoStart, vscode.ConfigurationTarget.Global)),
+            Promise.resolve(this.context.globalState.update('setupCompleted', true))
+        ];
+
+        if (data.authToken.trim()) {
+            updates.push(Promise.resolve(config.update('ngrokAuthToken', data.authToken.trim(), vscode.ConfigurationTarget.Global)));
+        }
+        
+        if (data.customDomain.trim()) {
+            updates.push(Promise.resolve(config.update('ngrokDomain', data.customDomain.trim(), vscode.ConfigurationTarget.Global)));
+        }
+        
+        if (data.providerUrl.trim()) {
+            updates.push(Promise.resolve(config.update('providerUrl', data.providerUrl.trim(), vscode.ConfigurationTarget.Global)));
+        }
+
+        return updates;
+    }
+
+    private async handlePostSetupActions(autoStart: boolean): Promise<void> {
+        try {
+            if (autoStart) {
+                await this.startBridgeAfterSetup();
+            } else {
+                this.showStartOption();
+            }
+        } catch (error) {
+            this.logger.error('Post-setup actions failed', error);
         }
     }
 
@@ -93,7 +154,7 @@ export class SetupManager implements vscode.Disposable {
             vscode.window.showInformationMessage('Setup completed and bridge started successfully!');
         } catch (error) {
             this.logger.error('Auto-start failed', error);
-            vscode.window.showErrorMessage(
+            vscode.window.showWarningMessage(
                 `Setup completed but auto-start failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 'Start Manually'
             ).then(selection => {
@@ -115,7 +176,7 @@ export class SetupManager implements vscode.Disposable {
         });
     }
 
-    private async skipSetup(): Promise<void> {
+    public async skipSetup(): Promise<void> {
         await this.context.globalState.update('setupSkipped', true);
         this.logger.info('Setup skipped by user');
         
@@ -125,6 +186,24 @@ export class SetupManager implements vscode.Disposable {
         ).then(selection => {
             if (selection === 'Open Commands') {
                 vscode.commands.executeCommand('workbench.action.showCommands');
+            }
+        });
+    }
+
+    public async resetSetupState(): Promise<void> {
+        await Promise.all([
+            this.context.globalState.update('hasRunBefore', undefined),
+            this.context.globalState.update('setupCompleted', undefined),
+            this.context.globalState.update('setupSkipped', undefined)
+        ]);
+        this.logger.info('Setup state has been reset');
+        
+        vscode.window.showInformationMessage(
+            'Setup state has been reset. The first-time setup will appear when you restart VS Code or reload the window.',
+            'Reload Window'
+        ).then(selection => {
+            if (selection === 'Reload Window') {
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
             }
         });
     }
