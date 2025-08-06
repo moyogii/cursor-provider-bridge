@@ -5,7 +5,10 @@ import {
     IModelProvider,
     TunnelStatus,
     TunnelError,
-    BridgeConfiguration
+    BridgeConfiguration,
+    NgrokTunnel,
+    NgrokOptions,
+    TunnelStartResult
 } from '../types';
 import { getLogger } from '../utils/logger';
 import { safeAsync, retry, withTimeout } from '../utils/async';
@@ -15,7 +18,7 @@ export class NgrokTunnelManager implements ITunnelManager {
     private static readonly START_TIMEOUT = 30000;
     private static readonly STOP_TIMEOUT = 10000;
 
-    private tunnel: any = null;
+    private tunnel: NgrokTunnel | null = null;
     private proxyServer: ProxyServer | null = null;
     private status: TunnelStatus = { isRunning: false };
     private readonly logger = getLogger();
@@ -27,28 +30,57 @@ export class NgrokTunnelManager implements ITunnelManager {
         this.proxyServer = new ProxyServer(configManager, modelProvider);
     }
 
-
     async start(): Promise<void> {
         if (this.status.isRunning) {
             this.logger.warn('Attempted to start tunnel when already running');
             return;
         }
 
+        if (this.status.isStarting) {
+            this.logger.warn('Attempted to start tunnel while start is already in progress');
+            return;
+        }
+
+        this.status = { ...this.status, isStarting: true };
+
+        try {
+            await this.cleanupExistingProxy();
+            const config = this.configManager.getConfiguration();
+
+            const result = await this.startTunnelWithRetry(config);
+            
+            if (!result.success) {
+                await this.handleStartupFailure(result.error);
+                return;
+            }
+
+            this.updateSuccessfulStartStatus(result.data!, config);
+        } finally {
+            this.status = { ...this.status, isStarting: false };
+        }
+    }
+
+    private async cleanupExistingProxy(): Promise<void> {
         if (this.proxyServer?.isServerRunning()) {
             await this.proxyServer.stop().catch(error => {
                 this.logger.error('Error stopping existing proxy server', error);
             });
         }
+    }
 
-        const config = this.configManager.getConfiguration();
+    private logStartupInfo(config: BridgeConfiguration): void {
         this.logger.info('Starting proxy server and ngrok tunnel', {
             providerUrl: config.providerUrl,
             region: config.ngrokRegion,
             hasDomain: !!config.ngrokDomain,
             hasAuthToken: !!config.ngrokAuthToken
         });
+    }
 
-        const result = await safeAsync(async () => {
+    private async startTunnelWithRetry(config: BridgeConfiguration): Promise<{ success: boolean; data?: TunnelStartResult; error?: Error }> {
+        this.logStartupInfo(config);
+        
+        return await safeAsync(async () => {
             return await withTimeout(
                 retry(async () => {
                     const proxyPort = await this.proxyServer!.start();
@@ -57,41 +89,39 @@ export class NgrokTunnelManager implements ITunnelManager {
                 NgrokTunnelManager.START_TIMEOUT
             );
         });
+    }
 
-        if (!result.success) {
-            if (this.proxyServer?.isServerRunning()) {
-                await this.proxyServer.stop().catch(cleanupError => {
-                    this.logger.error('Error stopping proxy server during cleanup', cleanupError);
-                });
-            }
-
-            const error = result.error;
-            this.status = { 
-                isRunning: false, 
-                error: error?.message || 'Unknown error' 
-            };
-            
-            if (error?.message?.includes('PORT_IN_USE')) {
-                this.logger.error('Port conflict detected', error);
-                throw new TunnelError(
-                    'Port 8082 is already in use. Please stop any other applications using this port or restart VS Code.',
-                    error
-                );
-            }
-            
-            this.logger.error('Failed to start tunnel', error);
-            throw new TunnelError('Failed to start ngrok tunnel', error);
+    private async handleStartupFailure(error?: Error): Promise<void> {
+        await this.cleanupExistingProxy();
+        
+        this.status = { 
+            isRunning: false,
+            isStarting: false,
+            error: error?.message || 'Unknown error' 
+        };
+        
+        if (error?.message?.includes('PORT_IN_USE')) {
+            this.logger.error('Port conflict detected', error);
+            throw new TunnelError(
+                'Port 8082 is already in use. Please stop any other applications using this port or restart VS Code.',
+                error
+            );
         }
+        
+        this.logger.error('Failed to start tunnel', error);
+        throw new TunnelError('Failed to start ngrok tunnel', error);
+    }
 
-        this.tunnel = result.data?.tunnel;
+    private updateSuccessfulStartStatus(data: TunnelStartResult, config: BridgeConfiguration): void {
+        this.tunnel = data.tunnel;
         this.status = { 
             isRunning: true, 
-            url: result.data?.url || '' 
+            url: data.url || '' 
         };
 
         this.logger.info('Tunnel started successfully', {
             url: this.status.url,
-            proxyPort: result.data?.proxyPort || 0,
+            proxyPort: data.proxyPort || 0,
             forwarding: config.providerUrl
         });
     }
@@ -100,30 +130,15 @@ export class NgrokTunnelManager implements ITunnelManager {
         const hasActiveTunnel = this.tunnel && this.status.isRunning;
         const hasActiveProxy = this.proxyServer?.isServerRunning();
         
-        if (!hasActiveTunnel && !hasActiveProxy) {
-            return;
-        }
+        if (!hasActiveTunnel && !hasActiveProxy) {return;}
 
-        let tunnelResult: { success: boolean; error?: Error } = { success: true };
-        let proxyResult: { success: boolean; error?: Error } = { success: true };
-
-        if (hasActiveTunnel) {
-            tunnelResult = await safeAsync(async () => {
-                return await withTimeout(
-                    this.tunnel!.close(),
-                    NgrokTunnelManager.STOP_TIMEOUT
-                );
-            });
-        }
-
-        if (hasActiveProxy) {
-            proxyResult = await safeAsync(async () => {
-                await this.proxyServer!.stop();
-            });
-        }
+        const [tunnelResult, proxyResult] = await Promise.all([
+            this.stopTunnel(!!hasActiveTunnel),
+            this.stopProxy(!!hasActiveProxy)
+        ]);
 
         this.tunnel = null;
-        this.status = { isRunning: false };
+        this.status = { isRunning: false, isStarting: false };
 
         if (!tunnelResult.success) {
             this.logger.error('Error stopping tunnel', tunnelResult.error);
@@ -133,6 +148,25 @@ export class NgrokTunnelManager implements ITunnelManager {
         if (!proxyResult.success) {
             this.logger.error('Error stopping proxy server', proxyResult.error);
         }
+    }
+
+    private async stopTunnel(hasActiveTunnel: boolean): Promise<{ success: boolean; error?: Error }> {
+        if (!hasActiveTunnel) {return { success: true };}
+        
+        return await safeAsync(async () => {
+            return await withTimeout(
+                this.tunnel!.close(),
+                NgrokTunnelManager.STOP_TIMEOUT
+            );
+        });
+    }
+
+    private async stopProxy(hasActiveProxy: boolean): Promise<{ success: boolean; error?: Error }> {
+        if (!hasActiveProxy) {return { success: true };}
+        
+        return await safeAsync(async () => {
+            await this.proxyServer!.stop();
+        });
     }
 
     async restart(): Promise<void> {
@@ -169,7 +203,7 @@ export class NgrokTunnelManager implements ITunnelManager {
         }
         
         this.tunnel = null;
-        this.status = { isRunning: false };
+        this.status = { isRunning: false, isStarting: false };
     }
 
     dispose(): void {
@@ -188,7 +222,7 @@ export class NgrokTunnelManager implements ITunnelManager {
         }
     }
 
-    private async createTunnel(config: BridgeConfiguration, proxyPort: number): Promise<{ tunnel: any; url: string; proxyPort: number }> {
+    private async createTunnel(config: BridgeConfiguration, proxyPort: number): Promise<TunnelStartResult> {
         const proxyUrl = `http://localhost:${proxyPort}`;
         const ngrokOptions = this.buildNgrokOptions(config, proxyUrl);
 
@@ -198,7 +232,7 @@ export class NgrokTunnelManager implements ITunnelManager {
             proxyPort
         });
 
-        const tunnel = await ngrok.forward(ngrokOptions);
+        const tunnel = await ngrok.forward(ngrokOptions) as NgrokTunnel;
         const url = tunnel.url();
 
         if (!url) {
@@ -215,16 +249,9 @@ export class NgrokTunnelManager implements ITunnelManager {
         return { tunnel, url, proxyPort };
     }
 
-    private parseUrl(urlString: string): URL {
-        try {
-            return new URL(urlString);
-        } catch (error) {
-            throw new TunnelError(`Invalid Provider URL: ${urlString}`, error);
-        }
-    }
 
-    private buildNgrokOptions(config: BridgeConfiguration, proxyUrl: string): Record<string, unknown> {
-        const options: Record<string, unknown> = {
+    private buildNgrokOptions(config: BridgeConfiguration, proxyUrl: string): NgrokOptions {
+        const options: NgrokOptions = {
             addr: proxyUrl,
             region: config.ngrokRegion
         };
