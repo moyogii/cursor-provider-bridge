@@ -170,14 +170,59 @@ export class NgrokTunnelManager implements ITunnelManager {
     }
 
     async restart(): Promise<void> {
+        this.logger.info('Restarting tunnel gracefully...');
+        
         try {
-            await this.stop();
+            await this.gracefulStop();
+            
+            // Brief pause to allow cleanup
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             await this.start();
+            this.logger.info('Tunnel restarted successfully');
         } catch (error) {
             this.logger.error('Failed to restart tunnel', error);
             throw error instanceof TunnelError 
                 ? error 
                 : new TunnelError('Failed to restart tunnel', error);
+        }
+    }
+
+    private async gracefulStop(): Promise<void> {
+        const hasActiveTunnel = this.tunnel && this.status.isRunning;
+        const hasActiveProxy = this.proxyServer?.isServerRunning();
+        
+        if (!hasActiveTunnel && !hasActiveProxy) {
+            this.logger.debug('No active services to stop');
+            return;
+        }
+
+        this.logger.info('Gracefully stopping tunnel and proxy services...');
+
+        try {
+            const [tunnelResult, proxyResult] = await Promise.allSettled([
+                hasActiveTunnel ? this.stopTunnel(true) : Promise.resolve({ success: true }),
+                hasActiveProxy ? this.stopProxy(true) : Promise.resolve({ success: true })
+            ]);
+
+            this.tunnel = null;
+            this.status = { isRunning: false, isStarting: false };
+
+            if (tunnelResult.status === 'rejected') {
+                this.logger.warn('Tunnel stop had issues during graceful restart', tunnelResult.reason);
+            }
+            
+            if (proxyResult.status === 'rejected') {
+                this.logger.warn('Proxy stop had issues during graceful restart', proxyResult.reason);
+            }
+
+            if (tunnelResult.status === 'rejected' && proxyResult.status === 'rejected') {
+                throw new TunnelError('Failed to stop both tunnel and proxy during restart');
+            }
+            
+        } catch (error) {
+            this.logger.error('Error during graceful stop, attempting force cleanup', error);
+            await this.forceCleanup();
         }
     }
 

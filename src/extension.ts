@@ -15,9 +15,9 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(setupManager);
     registerCommands(context);
 
-    const configurationChangeListener = vscode.workspace.onDidChangeConfiguration(e => {
+    const configurationChangeListener = vscode.workspace.onDidChangeConfiguration(async e => {
         if (e.affectsConfiguration('cursor-provider-bridge')) {
-            initializeServices(context);
+            await handleConfigurationChange(e, context);
         }
     });
     context.subscriptions.push(configurationChangeListener);
@@ -160,6 +160,47 @@ function showSetupSkippedMessage(): void {
             vscode.commands.executeCommand('cursor-provider-bridge.runSetup');
         }
     });
+}
+
+async function handleConfigurationChange(event: vscode.ConfigurationChangeEvent, context: vscode.ExtensionContext): Promise<void> {
+    const logger = getLogger();
+    
+    try {
+        if (!serviceManager) {
+            logger.info('Configuration changed but no service manager exists, initializing services');
+            initializeServices(context);
+            return;
+        }
+
+        const changedProviderUrl = event.affectsConfiguration('cursor-provider-bridge.providerUrl');
+        const changedNgrokSettings = event.affectsConfiguration('cursor-provider-bridge.ngrokDomain') ||
+                                    event.affectsConfiguration('cursor-provider-bridge.ngrokRegion') ||
+                                    event.affectsConfiguration('cursor-provider-bridge.ngrokAuthToken');
+        
+        if (changedProviderUrl || changedNgrokSettings) {
+            logger.info('Configuration change detected that affects bridge connection');
+            
+            try {
+                await serviceManager.handleConfigurationChange();
+                
+                const status = serviceManager.getBridgeStatus();
+                if (status.isRunning) {
+                    vscode.window.showInformationMessage('Bridge restarted successfully due to configuration change');
+                }
+            } catch (error) {
+                logger.error('Failed to handle configuration change', error);
+                vscode.window.showWarningMessage(
+                    `Configuration updated but bridge restart failed: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        } else {
+            logger.debug('Configuration changed but no bridge restart needed');
+        }
+        
+    } catch (error) {
+        logger.error('Error handling configuration change', error);
+        initializeServices(context);
+    }
 }
 
 function initializeServices(context: vscode.ExtensionContext): void {

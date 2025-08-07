@@ -57,6 +57,23 @@ export class ServiceManager implements vscode.Disposable {
         await this.tunnelManager.restart();
     }
 
+    async handleConfigurationChange(): Promise<void> {
+        const status = this.tunnelManager.getStatus();
+        
+        if (status.isRunning) {
+            this.logger.info('Gracefully restarting bridge due to configuration change');
+            try {
+                await this.tunnelManager.restart();
+                this.logger.info('Bridge restarted successfully after configuration change');
+            } catch (error) {
+                this.logger.error('Failed to restart bridge after configuration change', error);
+                throw error;
+            }
+        } else {
+            this.logger.debug('Configuration changed but bridge is not running, no restart needed');
+        }
+    }
+
     async showConfiguration(): Promise<void> {
         await this.configManager.showConfigurationQuickPick();
     }
