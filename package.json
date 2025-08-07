@@ -186,7 +186,7 @@
     "url": "https://github.com/moyogii/cursor-provider-bridge/issues"
   },
   "homepage": "https://github.com/moyogii/cursor-provider-bridge#readme",
-  "license": "GNU-3.0",
+  "license": "GPL-3.0",
   "optionalDependencies": {
     "@ngrok/ngrok-darwin-arm64": "^1.5.2",
     "@ngrok/ngrok-darwin-x64": "^1.5.2",
