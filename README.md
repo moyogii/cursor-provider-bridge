@@ -2,7 +2,7 @@
 <img width="128" height="128" alt="icon" src="https://github.com/user-attachments/assets/0b55f7f9-31cf-4a08-9114-efd4f49e9a41" />
 </p>
 
-# Cursor Provider Bridge Extension
+# Cursor Provider Bridge
 
 A Cursor extension that integrates local AI model providers with the Cursor IDE Chat through secure ngrok tunneling.
 
