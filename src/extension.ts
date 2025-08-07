@@ -55,7 +55,7 @@ async function handleFirstTimeSetup(context: vscode.ExtensionContext, logger: Lo
         'Welcome to Cursor Provider Bridge! Let\'s set up your connection to local AI providers.',
         { modal: false },
         'Start Setup',
-        'Skip for Now'
+        'Skip for Now' 
     );
 
     if (result === 'Start Setup') {
