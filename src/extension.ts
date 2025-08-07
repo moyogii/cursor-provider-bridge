@@ -166,6 +166,14 @@ function initializeServices(context: vscode.ExtensionContext): void {
     const logger = getLogger();
 
     try {
+        if (serviceManager) {
+            serviceManager.dispose();
+            const index = context.subscriptions.indexOf(serviceManager);
+            if (index !== -1) {
+                context.subscriptions.splice(index, 1);
+            }
+        }
+
         serviceManager = new ServiceManager(context);
         context.subscriptions.push(serviceManager);
 
