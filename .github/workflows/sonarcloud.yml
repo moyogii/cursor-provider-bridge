@@ -1,0 +1,51 @@
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - 'releases/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+      - 'releases/**'
+      - 'feature/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Lint and compile
+        run: |
+          npm run lint
+          npm run compile
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
