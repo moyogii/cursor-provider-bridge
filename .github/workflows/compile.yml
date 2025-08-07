@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   sonarcloud:
-    name: SonarCloud Scan
+    name: Compile & Lint Check
     runs-on: ubuntu-latest
     
     steps:
