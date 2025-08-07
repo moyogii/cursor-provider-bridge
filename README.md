@@ -1,8 +1,15 @@
+<p align="center">
+<img width="128" height="128" alt="icon" src="https://github.com/user-attachments/assets/0b55f7f9-31cf-4a08-9114-efd4f49e9a41" />
+</p>
+
 # Cursor Provider Bridge Extension
 
 A Cursor extension that integrates local AI model providers with the Cursor IDE Chat through secure ngrok tunneling.
 
 **Note**: This extension is specifically designed for local development environments with supported LLM providers (Ollama, LM Studio). It's important to note that each chat request will first be processed by Cursor's servers before being forwarded to your locally hosted language model. You are responsible for ensuring compliance with the terms of service and licensing agreements associated with chosen models and the Cursor platform.
+
+## Demo
+https://github.com/user-attachments/assets/be68c13d-622c-41c8-a88e-06a9baaba598
 
 ## Features
 
