@@ -103,7 +103,22 @@ async function handleAutoStartAfterSetup(): Promise<void> {
 
     try {
         await serviceManager.startBridge();
-        await vscode.window.showInformationMessage('Setup completed and bridge started successfully!');
+
+        const status = serviceManager.tunnelManager.getStatus();
+        const tunnelUrl = status.url || 'Check status bar for URL';
+        
+        const selection = await vscode.window.showInformationMessage(
+            `Setup completed and bridge started! Tunnel URL: ${tunnelUrl}. Configure Cursor settings next.`,
+            'Copy URL',
+            'Open Cursor Settings'
+        );
+        
+        if (selection === 'Copy URL' && status.url) {
+            await vscode.env.clipboard.writeText(status.url);
+            vscode.window.showInformationMessage('Tunnel URL copied to clipboard!');
+        } else if (selection === 'Open Cursor Settings') {
+            vscode.commands.executeCommand('aiSettings.action.open');
+        }
     } catch (error) {
         logger.error('Auto-start failed after setup', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -124,11 +139,14 @@ async function handleAutoStartAfterSetup(): Promise<void> {
 
 function showSetupCompletedMessage(): void {
     vscode.window.showInformationMessage(
-        'Setup completed successfully!',
-        'Start Bridge'
+        'Setup completed! Next: Start the bridge, copy the tunnel URL, then configure Cursor settings.',
+        'Start Bridge',
+        'Open Cursor Settings'
     ).then(selection => {
         if (selection === 'Start Bridge') {
             vscode.commands.executeCommand('cursor-provider-bridge.start');
+        } else if (selection === 'Open Cursor Settings') {
+            vscode.commands.executeCommand('workbench.action.openSettings');
         }
     });
 }

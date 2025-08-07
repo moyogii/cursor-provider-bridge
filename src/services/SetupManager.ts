@@ -90,6 +90,9 @@ export class SetupManager implements vscode.Disposable {
                         case 'openAuthUrl':
                             vscode.env.openExternal(vscode.Uri.parse('https://dashboard.ngrok.com/get-started/your-authtoken'));
                             break;
+                        case 'openCursorSettings':
+                            vscode.commands.executeCommand('aiSettings.action.open');
+                            break;
                     }
                 } catch (error) {
                     this.logger.error('Setup message handling failed', error);
@@ -445,6 +448,27 @@ export class SetupManager implements vscode.Disposable {
             </div>
         </div>
 
+        <div class="section">
+            <div class="section-title">
+                <span class="step-num">4</span>
+                Configure Cursor Settings
+            </div>
+            <p style="color: #ccc; margin-bottom: 12px;">Set up Cursor to use your secure tunnel URL for chat requests.</p>
+            
+            <div class="note" style="margin-bottom: 12px;">
+                <strong>After completing setup:</strong><br>
+                1. Open Cursor Settings<br>
+                2. Navigate to: Models > API Keys<br>
+                3. Replace "Override OpenAI Base URL" with your tunnel url (you'll receive this after setup)<br>
+                4. Enter your provider's auth token (if necessary) and click "Verify"<br>
+                5. Add custom models by clicking the "Add Custom Model" button under the "View All Models" section<br>
+            </div>
+            
+            <button class="get-token" onclick="openCursorSettings()" style="background: rgba(100,150,255,0.2); border: 1px solid rgba(100,150,255,0.4);">
+                ⚙️ Open Cursor Settings
+            </button>
+        </div>
+
         <div class="skip-info">
             You can skip setup and configure these settings later via command palette.
         </div>
@@ -460,6 +484,10 @@ export class SetupManager implements vscode.Disposable {
         
         function openAuthUrl() {
             vscode.postMessage({ command: 'openAuthUrl' });
+        }
+        
+        function openCursorSettings() {
+            vscode.postMessage({ command: 'openCursorSettings' });
         }
         
         function completeSetup() {
