@@ -185,7 +185,7 @@ export class ProxyServer {
     ): Promise<void> {
         const config = this.configManager.getConfiguration();
         const baseUrl = config.providerUrl.endsWith('/') ? config.providerUrl.slice(0, -1) : config.providerUrl;
-        const targetUrl = `${baseUrl}/v1/chat/completions`;
+        const targetUrl = this.validateAndBuildUrl(baseUrl, '/v1/chat/completions');
 
         await this.forwardRequestToTarget(req, res, targetUrl, body);
     }
@@ -201,7 +201,7 @@ export class ProxyServer {
             path = `/v1${path}`;
         }
         
-        const targetUrl = `${baseUrl}${path}`;
+        const targetUrl = this.validateAndBuildUrl(baseUrl, path);
         
         const body = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' 
             ? await this.readRequestBody(req) 
@@ -321,6 +321,7 @@ export class ProxyServer {
     private setCorsHeaders(res: http.ServerResponse, req?: http.IncomingMessage): void {
         const allowedOrigins = [
             'vscode-webview://',
+            'vscode-file://',
             'https://api2.cursor.sh',
             'https://api3.cursor.sh', 
             'https://repo42.cursor.sh',
@@ -337,6 +338,9 @@ export class ProxyServer {
             const isAllowed = allowedOrigins.some(allowed => {
                 if (allowed.startsWith('vscode-webview://')) {
                     return origin.startsWith('vscode-webview://');
+                }
+                if (allowed.startsWith('vscode-file://')) {
+                    return origin.startsWith('vscode-file://');
                 }
                 return origin === allowed;
             });
@@ -400,6 +404,29 @@ export class ProxyServer {
             this.stop().catch(error => {
                 this.logger.error('Error during proxy server disposal', error);
             });
+        }
+    }
+
+    private validateAndBuildUrl(baseUrl: string, path: string): string {
+        try {
+            const parsedBase = new URL(baseUrl);
+            const hostname = parsedBase.hostname.toLowerCase();
+            
+            if (!['localhost', '127.0.0.1', '::1'].includes(hostname) && 
+                !hostname.match(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/)) {
+                throw new Error(`Only local/private network connections allowed, got: ${hostname}`);
+            }
+            
+            const safePath = path.startsWith('/') ? path : `/${path}`;
+            if (safePath.includes('..') || !/^\/[\w\-\.\/\?=&]*$/.test(safePath)) {
+                throw new Error(`Invalid path: ${path}`);
+            }
+            
+            const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+            return `${cleanBaseUrl}${safePath}`;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Invalid URL';
+            throw new BridgeError(`URL validation failed: ${message}`, 'URL_VALIDATION_ERROR');
         }
     }
 
