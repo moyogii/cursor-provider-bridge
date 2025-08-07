@@ -9,6 +9,8 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 node_modules/**
+!node_modules/@ngrok/**
+!node_modules/**/prebuilds/**
 *.pyc
 __pycache__/**
 .pytest_cache/**
@@ -17,3 +19,5 @@ __pycache__/**
 .venv/
 env/
 venv/
+.claude/
+CLAUDE.md
