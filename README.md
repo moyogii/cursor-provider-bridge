@@ -3,6 +3,8 @@
 </p>
 
 # Cursor Provider Bridge
+![Open VSX Version](https://img.shields.io/open-vsx/v/moyogi/cursor-provider-bridge?style=flat-square)
+![GitHub License](https://img.shields.io/github/license/moyogii/cursor-provider-bridge?style=flat-square)
 
 A Cursor extension that integrates local AI model providers with the Cursor IDE Chat through secure ngrok tunneling.
 
