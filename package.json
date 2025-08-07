@@ -2,7 +2,7 @@
   "name": "cursor-provider-bridge",
   "displayName": "Cursor Provider Bridge",
   "description": "Connect Cursor IDE to local AI providers via ngrok tunneling",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "icon": "icon.png",
   "publisher": "moyogi",
   "engines": {

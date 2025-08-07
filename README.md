@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/be68c13d-622c-41c8-a88e-06a9baaba598
 
 ### From VSIX Package
 1. Download the latest `.vsix` file from releases
-2. Install in Cursor: `cursor --install-extension cursor-provider-bridge-0.1.0.vsix`
+2. Install in Cursor: `cursor --install-extension cursor-provider-bridge-0.1.1.vsix`
 3. Or use Cursor UI: Extensions → "..." → Install from VSIX
 
 ### From Source
