@@ -154,7 +154,10 @@
     "test": "node ./out/test/runTest.js",
     "test:coverage": "c8 --reporter=lcov --reporter=html npm test",
     "package": "vsce package",
-    "sonar": "sonar-scanner"
+    "sonar": "sonar-scanner",
+    "install:cross-platform": "npm install --os=linux --cpu=x64 @ngrok/ngrok-linux-x64-gnu@1.5.2 && npm install --os=darwin --cpu=x64 @ngrok/ngrok-darwin-x64@1.5.2 && npm install --os=darwin --cpu=arm64 @ngrok/ngrok-darwin-arm64@1.5.2",
+    "build": "npm run install:cross-platform && npm run compile && npm run lint",
+    "package:cross-platform": "npm run build && npm run package"
   },
   "devDependencies": {
     "@types/node": "16.x",
@@ -183,5 +186,10 @@
     "url": "https://github.com/moyogii/cursor-provider-bridge/issues"
   },
   "homepage": "https://github.com/moyogii/cursor-provider-bridge#readme",
-  "license": "GNU-3.0"
+  "license": "GNU-3.0",
+  "optionalDependencies": {
+    "@ngrok/ngrok-darwin-arm64": "^1.5.2",
+    "@ngrok/ngrok-darwin-x64": "^1.5.2",
+    "@ngrok/ngrok-linux-x64-gnu": "^1.5.2"
+  }
 }
