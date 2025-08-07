@@ -1,8 +1,9 @@
 {
   "name": "cursor-provider-bridge",
   "displayName": "Cursor Provider Bridge",
-  "description": "Connect Cursor IDE to local AI providers via ngrok tunneling with request transformation",
+  "description": "Connect Cursor IDE to local AI providers via ngrok tunneling",
   "version": "0.1.0",
+  "icon": "icon.png",
   "publisher": "moyogi",
   "engines": {
     "vscode": "^1.80.0"
