@@ -51,11 +51,6 @@
         "category": "Cursor Provider Bridge"
       },
       {
-        "command": "cursor-provider-bridge.showStatus",
-        "title": "Show Status",
-        "category": "Cursor Provider Bridge"
-      },
-      {
         "command": "cursor-provider-bridge.showQuickMenu",
         "title": "Show Quick Menu",
         "category": "Cursor Provider Bridge"
