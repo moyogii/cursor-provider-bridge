@@ -125,9 +125,6 @@
           "command": "cursor-provider-bridge.configure"
         },
         {
-          "command": "cursor-provider-bridge.showStatus"
-        },
-        {
           "command": "cursor-provider-bridge.showQuickMenu"
         },
         {
