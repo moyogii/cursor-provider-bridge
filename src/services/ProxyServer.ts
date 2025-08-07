@@ -422,7 +422,10 @@ export class ProxyServer {
                 throw new Error(`Invalid path: ${path}`);
             }
             
-            const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+            let cleanBaseUrl = baseUrl;
+            while (cleanBaseUrl.endsWith('/')) {
+                cleanBaseUrl = cleanBaseUrl.slice(0, -1);
+            }
             return `${cleanBaseUrl}${safePath}`;
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Invalid URL';
