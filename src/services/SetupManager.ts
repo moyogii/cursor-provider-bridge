@@ -421,6 +421,14 @@ export class SetupManager implements vscode.Disposable {
                 <input type="text" id="customDomain" placeholder="e.g., my-app.ngrok-free.app" />
                 <div class="help">Leave empty to use auto-generated domain</div>
             </div>
+            
+            <div class="checkbox-row">
+                <input type="checkbox" id="autoStart" checked />
+                <label for="autoStart" class="checkbox-text">
+                    <div class="title">Auto-start on Cursor startup</div>
+                    <div class="desc">Automatically start bridge when Cursor launches</div>
+                </label>
+            </div>
         </div>
 
         <div class="section">
@@ -433,14 +441,6 @@ export class SetupManager implements vscode.Disposable {
                 <label for="providerUrl">Provider URL</label>
                 <input type="text" id="providerUrl" placeholder="http://localhost:1234" value="http://localhost:1234" />
                 <div class="help">URL of your local AI provider (LM Studio, Ollama, etc.)</div>
-            </div>
-            
-            <div class="checkbox-row">
-                <input type="checkbox" id="autoStart" checked />
-                <label for="autoStart" class="checkbox-text">
-                    <div class="title">Auto-start on Cursor startup</div>
-                    <div class="desc">Automatically start bridge when Cursor launches</div>
-                </label>
             </div>
             
             <div class="note">
