@@ -28,6 +28,7 @@
                 "format": null
             }
         ],
+        "@typescript-eslint/no-explicit-any": "error",
         "@typescript-eslint/semi": "warn",
         "curly": "warn",
         "eqeqeq": "warn",
