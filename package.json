@@ -2,7 +2,7 @@
   "name": "cursor-provider-bridge",
   "displayName": "Cursor Provider Bridge",
   "description": "Connect Cursor IDE to local AI providers via ngrok tunneling",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "icon.png",
   "publisher": "moyogi",
   "engines": {
@@ -145,11 +145,9 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "test:coverage": "c8 --reporter=lcov --reporter=html npm test",
-    "package": "vsce package",
+    "package": "npm run build && vsce package",
     "sonar": "sonar-scanner",
-    "install:cross-platform": "npm install --os=linux --cpu=x64 @ngrok/ngrok-linux-x64-gnu@1.5.2 && npm install --os=darwin --cpu=x64 @ngrok/ngrok-darwin-x64@1.5.2 && npm install --os=darwin --cpu=arm64 @ngrok/ngrok-darwin-arm64@1.5.2",
-    "build": "npm run install:cross-platform && npm run compile && npm run lint",
-    "package:cross-platform": "npm run build && npm run package"
+    "build": "npm run compile && npm run lint"
   },
   "devDependencies": {
     "@types/node": "16.x",
@@ -178,10 +176,5 @@
     "url": "https://github.com/moyogii/cursor-provider-bridge/issues"
   },
   "homepage": "https://github.com/moyogii/cursor-provider-bridge#readme",
-  "license": "GPL-3.0",
-  "optionalDependencies": {
-    "@ngrok/ngrok-darwin-arm64": "^1.5.2",
-    "@ngrok/ngrok-darwin-x64": "^1.5.2",
-    "@ngrok/ngrok-linux-x64-gnu": "^1.5.2"
-  }
+  "license": "GPL-3.0"
 }
