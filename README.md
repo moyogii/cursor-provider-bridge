@@ -1,12 +1,10 @@
 <p align="center">
 <img width="128" height="128" alt="icon" src="https://github.com/user-attachments/assets/0b55f7f9-31cf-4a08-9114-efd4f49e9a41" />
-</p>
-
-<h1 align="center">Cursor Provider Bridge</h1>
-
-<p align="center">
-  ![Open VSX Version](https://img.shields.io/open-vsx/v/moyogi/cursor-provider-bridge?style=flat-square)
-  ![GitHub License](https://img.shields.io/github/license/moyogii/cursor-provider-bridge?style=flat-square)
+<br>
+<h1>Cursor Provider Bridge</h1>
+<br>
+<img src="https://img.shields.io/open-vsx/v/moyogi/cursor-provider-bridge?style=flat-square" alt="Open VSX Version">
+<img src="https://img.shields.io/github/license/moyogii/cursor-provider-bridge?style=flat-square" alt="GitHub License">
 </p>
 
 A Cursor extension that integrates local AI model providers with the Cursor IDE Chat through secure ngrok tunneling.
